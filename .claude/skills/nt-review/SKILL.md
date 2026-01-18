@@ -365,7 +365,7 @@ self.log.error(f"No signal")  # Not an error
 
 ## References
 
-For detailed standards:
-- `@references/developer_guide/coding_standards.md`
-- `@references/developer_guide/testing.md`
-- `@references/concepts/backtesting.md`
+For detailed standards (relative to this skill folder):
+- `references/developer_guide/coding_standards.md`
+- `references/developer_guide/testing.md`
+- `references/concepts/backtesting.md`

@@ -259,12 +259,12 @@ After completing the design, produce a document with:
 
 ## References
 
-Load these for detailed API information:
-- `@references/concepts/architecture.md`
-- `@references/concepts/strategies.md`
-- `@references/concepts/actors.md`
-- `@references/concepts/message_bus.md`
-- `@references/concepts/data.md`
+Load these for detailed API information (relative to this skill folder):
+- `references/concepts/architecture.md`
+- `references/concepts/strategies.md`
+- `references/concepts/actors.md`
+- `references/concepts/message_bus.md`
+- `references/concepts/data.md`
 
 ## Next Step
 

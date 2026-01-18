@@ -298,11 +298,11 @@ Before marking a component complete:
 
 ## References
 
-For API details, load:
-- `@references/api_reference/trading.md` - Strategy API
-- `@references/api_reference/common.md` - Actor, OrderFactory
-- `@references/developer_guide/adapters.md` - Adapter development
-- `@references/developer_guide/coding_standards.md` - Style guide
+For API details, load (relative to this skill folder):
+- `references/api_reference/trading.md` - Strategy API
+- `references/api_reference/common.md` - Actor, OrderFactory
+- `references/developer_guide/adapters.md` - Adapter development
+- `references/developer_guide/coding_standards.md` - Style guide
 
 ## Next Step
 
