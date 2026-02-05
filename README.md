@@ -201,11 +201,6 @@ The skills include curated reference documentation from NautilusTrader:
 - Backtesting and Live Trading
 - Data handling and order flow
 
-### Developer Guide
-- Coding standards (Python and Rust)
-- Testing patterns
-- FFI memory contract
-- Benchmarking with Criterion and iai
 
 ## Custom Models
 

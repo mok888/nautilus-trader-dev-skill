@@ -475,3 +475,69 @@ class ExpectancyStatistic(PortfolioStatistic):
             "avg_loss": float(avg_loss),
             "win_rate": win_rate,
         }
+
+
+class CAGRStatistic(PortfolioStatistic):
+    """
+    Calculate Compound Annual Growth Rate (CAGR).
+    """
+
+    def __init__(self) -> None:
+        super().__init__()
+        self._name = "CAGR"
+
+    @property
+    def name(self) -> str:
+        return self._name
+
+    def calculate_from_positions(self, positions: list[Position]) -> float:
+        """Calculate CAGR based on realized PnL and time."""
+        if not positions:
+            return 0.0
+
+        ts_start = min(p.ts_opened for p in positions if p.ts_opened)
+        ts_end = max(p.ts_closed for p in positions if p.ts_closed)
+        if not ts_start or not ts_end:
+            return 0.0
+
+        duration_years = (ts_end - ts_start) / (1e9 * 60 * 60 * 24 * 365.25)
+        if duration_years <= 0:
+            return 0.0
+
+        total_pnl = sum(float(p.realized_pnl) for p in positions if p.realized_pnl)
+        # Assuming initial capital of 1,000,000 if not specified
+        initial_capital = 1_000_000.0
+        ending_value = initial_capital + total_pnl
+
+        cagr = (ending_value / initial_capital) ** (1 / duration_years) - 1
+        return float(cagr)
+
+
+class CalmarRatioStatistic(PortfolioStatistic):
+    """
+    Calculate Calmar Ratio (Annualized Return / Max Drawdown).
+    """
+
+    def __init__(self) -> None:
+        super().__init__()
+        self._name = "Calmar Ratio"
+
+    @property
+    def name(self) -> str:
+        return self._name
+
+    def calculate_from_positions(self, positions: list[Position]) -> float:
+        """Calculate Calmar Ratio."""
+        cagr = CAGRStatistic().calculate_from_positions(positions)
+        drawdown = DrawdownStatistic().calculate_from_positions(positions)
+        max_dd = drawdown.get("max_drawdown", 0.0)
+
+        if max_dd <= 0:
+            return float("inf") if cagr > 0 else 0.0
+
+        # Max drawdown as decimal of initial capital (1.0M)
+        max_dd_pct = max_dd / 1_000_000.0
+        if max_dd_pct == 0:
+            return 0.0
+
+        return float(cagr / max_dd_pct)

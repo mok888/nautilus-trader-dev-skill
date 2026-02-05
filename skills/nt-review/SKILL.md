@@ -91,7 +91,8 @@ price = instrument.make_price(100)  # Crashes if None
 | Config class | `{Component}Config` | `TrendStrategyConfig` |
 | Instrument ID | `{symbol}.{venue}` | `BTCUSDT-PERP.BINANCE` |
 | Strategy ID | `{Class}-{tag}` | `TrendStrategy-001` |
-| Bar type | `{id}-{step}-{agg}-{price}-{source}` | `BTCUSDT-PERP.BINANCE-5-MINUTE-LAST-EXTERNAL` |
+| Bar type | `{id}-{step}-{agg}-{price}-{source}` | `BTCUSDT.BINANCE-5-MINUTE-LAST-EXTERNAL` |
+| New Aggregations | `TICK_IMBALANCE`, `TICK_RUNS`, `VOLUME_IMBALANCE`, `VOLUME_RUNS`, `VALUE_IMBALANCE`, `VALUE_RUNS` | `BTCUSDT.BINANCE-1000-VOLUME_IMBALANCE-LAST-EXTERNAL` |
 | Custom data | `{Purpose}Data` | `RegimeData`, `FeatureData` |
 
 ### 2. Trading Correctness
@@ -180,13 +181,6 @@ Check for handling of:
 - [ ] First bar after start (indicators not initialized)
 - [ ] Gap in data (missing bars)
 - [ ] Market close/open transitions
-- [ ] Instrument not found in cache
-- [ ] Account with insufficient balance
-- [ ] Order rejected by venue
-- [ ] Partial fills
-- [ ] Network reconnection
-
-### 3. Performance
 
 #### Blocking Calls
 
@@ -494,14 +488,49 @@ def on_order_filled(self, event: OrderFilled) -> None:
 - [ ] External order claims configured if resuming
 - [ ] All order lifecycle events handled
 - [ ] Reconnection logic in adapters
-- [ ] State persistence to database configured
-- [ ] Graceful shutdown with order cancellation
-- [ ] Position sync on startup
-- [ ] Windows signal handling if applicable
 
-## 6. Rust/FFI Code Review
+### Risk Controls
 
-### Rust Style Conventions
+```python
+# CORRECT: Position limits configured
+config = StrategyConfig(
+    max_long_position=100.0,  # Max long quantity
+    max_short_position=100.0, # Max short quantity
+    max_notional_exposure=100_000.0, # Max total notional
+    max_open_orders=10,       # Max concurrent open orders
+)
+
+# CORRECT: Circuit breaker logic
+def on_bar(self, bar: Bar) -> None:
+    if self.clock.now() > self._circuit_breaker_time:
+        self.log.warning("Circuit breaker triggered, flattening position.")
+        self.cancel_all_orders()
+        self.close_position()
+        self.stop()
+```
+
+**Red flags:**
+- No position limits configured
+- No circuit breaker or emergency stop logic
+- Not handling `on_position_limit_breached` event
+
+### Exchange Specifics
+
+```python
+# CORRECT: Handling exchange-specific order types
+if self.instrument.exchange_id == "BINANCE":
+    order_type = OrderType.LIMIT_MAKER
+else:
+    order_type = OrderType.LIMIT
+
+# CORRECT: Handling exchange-specific fees
+fee_rate = self.instrument.maker_fee_rate if is_maker else self.instrument.taker_fee_rate
+```
+
+**Red flags:**
+- Hardcoding exchange IDs or parameters
+- Not using `instrument.maker_fee_rate` / `taker_fee_rate`
+- Assuming universal order types or features
 
 Check adherence to NautilusTrader Rust style:
 
@@ -739,6 +768,16 @@ sudo cargo flamegraph --bench matching -p nautilus-common --profile bench
 - [ ] Benchmarks in `benches/` directory
 - [ ] Flamegraph generated for optimization work
 - [ ] Before/after comparison documented
+
+## 8. Visualization Review (v1.221.0+)
+
+Verify Plotly tearsheet configuration and rendering:
+
+- [ ] `plotly>=6.3.1` installed in environment
+- [ ] `TearsheetConfig` includes appropriate statistics (CAGR, Calmar)
+- [ ] Custom charts use the `ChartRegistry` for decoupling
+- [ ] Interactive elements (hover, zoom) validated in browser
+- [ ] Data volume for Plotly is capped to avoid browser performance issues
 
 ## References
 

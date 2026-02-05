@@ -40,8 +40,6 @@ class MyStrategyConfig(StrategyConfig):
 
     instrument_id: InstrumentId
     bar_type: BarType
-    trade_size: Decimal
-    order_id_tag: str
 
 
 class MyStrategy(Strategy):

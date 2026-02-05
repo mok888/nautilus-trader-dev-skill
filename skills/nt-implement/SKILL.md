@@ -13,6 +13,18 @@ Implement nautilus_trader components using correct patterns and templates. This 
 - **Simulation models**: Custom FillModel, MarginModel, PortfolioStatistic
 - **Rust+PyO3 bindings**: High-performance core implementations with Python interop
 
+## Risk Engine
+
+- **Risk Management**: Implement custom risk checks and limits.
+- **Position Limits**: Enforce maximum position sizes or exposure.
+- **Drawdown Control**: Monitor and react to portfolio drawdowns.
+
+## Exchange-Specific Patterns
+
+- **Order Types**: Implement exchange-specific order types (e.g., Iceberg, Post-Only).
+- **Market Data Handling**: Parse and process unique market data streams.
+- **API Interaction**: Best practices for interacting with exchange APIs.
+
 ## When to Use
 
 - After architecture is defined (via nt-architect)
@@ -63,9 +75,6 @@ Templates are in `templates/` subdirectory:
 - `portfolio_statistic.py` - Custom portfolio statistic
 - `adapters/exchange.py` - Exchange adapter (data + execution)
 - `adapters/data_provider.py` - Data-only adapter
-- `adapters/internal.py` - Internal infrastructure adapter
-
-## Common Patterns
 
 ### Model Loading (msgspec preferred)
 

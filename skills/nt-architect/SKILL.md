@@ -207,7 +207,6 @@ CustomDataTypes (RegimeData, FeatureData)
    TradingStrategy (consumes RegimeData, executes trades)
 ```
 
-## Output: Architecture Document
 
 After completing the design, produce a document with:
 
