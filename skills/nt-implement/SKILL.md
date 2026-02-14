@@ -599,7 +599,7 @@ For performance-critical components, NautilusTrader uses Rust with PyO3 bindings
 
 ```rust
 // -------------------------------------------------------------------------------------------------
-//  Copyright (C) 2015-2025 Nautech Systems Pty Ltd. All rights reserved.
+//  Copyright (C) 2015-2026 Nautech Systems Pty Ltd. All rights reserved.
 //  https://nautechsystems.io
 //
 //  Licensed under the GNU Lesser General Public License Version 3.0 (the "License");
@@ -876,10 +876,14 @@ For API details, load (relative to this skill folder):
 - `references/api_reference/backtest.md` - BacktestEngine, FillModel, venues
 - `references/api_reference/analysis.md` - PortfolioAnalyzer, statistics
 - `references/api_reference/live.md` - LiveDataClient, LiveExecutionClient
-- `references/developer_guide/adapters.md` - Adapter development
+- `references/developer_guide/environment_setup.md` - Development environment setup
 - `references/developer_guide/coding_standards.md` - Style guide
+- `references/developer_guide/python.md` - Python conventions
 - `references/developer_guide/rust.md` - Rust style and conventions
 - `references/developer_guide/ffi.md` - FFI memory contract
+- `references/developer_guide/adapters.md` - Adapter development guide
+- `references/developer_guide/benchmarking.md` - Benchmarking guide
+- `references/developer_guide/docs_style.md` - Documentation style guide
 
 For concept understanding:
 - `references/concepts/backtesting.md` - Backtesting concepts and models

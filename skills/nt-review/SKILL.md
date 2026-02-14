@@ -537,7 +537,7 @@ Check adherence to NautilusTrader Rust style:
 ```rust
 // CORRECT: File header
 // -------------------------------------------------------------------------------------------------
-//  Copyright (C) 2015-2025 Nautech Systems Pty Ltd. All rights reserved.
+//  Copyright (C) 2015-2026 Nautech Systems Pty Ltd. All rights reserved.
 //  https://nautechsystems.io
 //
 //  Licensed under the GNU Lesser General Public License Version 3.0 (the "License");
@@ -575,6 +575,64 @@ tokio::spawn(async move { ... });
 - Not importing FAILED constant for `.expect()`
 - Using `HashMap` instead of `AHashMap` for non-security-critical code
 - Missing module-level documentation
+
+### Adapter Runtime Patterns
+
+For adapter crates (under `crates/adapters/`):
+
+```rust
+use nautilus_common::live::get_runtime;
+
+// CORRECT: Use get_runtime().spawn() for Python FFI compatibility
+get_runtime().spawn(async move {
+    // async work
+});
+
+// WRONG: tokio::spawn() panics from Python threads
+tokio::spawn(async move {
+    // async work
+});
+```
+
+**Red flags:**
+- Using `tokio::spawn()` in adapter code (not in tests)
+- Not using the shorter import path `nautilus_common::live::get_runtime`
+
+### Hash Collections
+
+```rust
+// CORRECT: AHashMap for hot paths
+use ahash::{AHashMap, AHashSet};
+let mut prices: AHashMap<InstrumentId, Price> = AHashMap::new();
+
+// CORRECT: Standard HashMap for non-hot paths and network clients
+use std::collections::{HashMap, HashSet};
+let mut config: HashMap<String, String> = HashMap::new();
+
+// CORRECT: DashMap for concurrent access
+use dashmap::DashMap;
+let cache: Arc<DashMap<K, V>> = Arc::new(DashMap::new());
+```
+
+**Decision tree:**
+- Immutable after construction → Use `Arc<AHashMap<K, V>>`
+- Concurrent access needed → Use `Arc<DashMap<K, V>>`
+- Single-threaded access → Use plain `AHashMap<K, V>`
+
+**Red flags:**
+- Using `AHashMap` for network clients where security outweighs performance
+- Wrapping `AHashMap` in `Arc` for concurrent writes without proper synchronization
+
+### Box-style Banner Comments
+
+```rust
+// WRONG: Box-style banner comments are prohibited
+// ============================================================================
+// Some Section
+// ============================================================================
+
+// CORRECT: Use clear function names, module structure, or doc comments
+```
 
 ### FFI Memory Safety
 
@@ -782,10 +840,14 @@ Verify Plotly tearsheet configuration and rendering:
 ## References
 
 For detailed standards (relative to this skill folder):
-- `references/developer_guide/coding_standards.md`
-- `references/developer_guide/testing.md`
+- `references/developer_guide/environment_setup.md` - Development environment setup
+- `references/developer_guide/coding_standards.md` - Code style and formatting
+- `references/developer_guide/python.md` - Python conventions
+- `references/developer_guide/testing.md` - Testing guide
 - `references/developer_guide/rust.md` - Rust style conventions
 - `references/developer_guide/ffi.md` - FFI memory contract
 - `references/developer_guide/benchmarking.md` - Benchmarking guide
+- `references/developer_guide/adapters.md` - Adapter development guide
+- `references/developer_guide/docs_style.md` - Documentation style guide
 - `references/concepts/backtesting.md`
 - `references/concepts/live.md` - Live trading configuration

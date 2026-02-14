@@ -4,7 +4,7 @@ A collection of Claude Code skills for developing trading systems with [Nautilus
 
 ## Overview
 
-These skills provide a structured workflow for implementing trading strategies, actors, indicators, and custom components in NautilusTrader. They encode best practices, correct patterns, and review checklists to help you write production-quality trading code.
+These skills provide a structured workflow for implementing trading strategies, actors, indicators, and custom components in NautilusTrader. They encode best practices, correct patterns, and review checklists to help you write production-quality trading code. All skills are updated to comply with the official [NautilusTrader Developer Guide](https://nautilustrader.io/docs/latest/developer_guide/).
 
 ```
 ┌─────────────────┐     ┌─────────────────┐     ┌─────────────────┐
@@ -187,7 +187,18 @@ nautilus-trader-dev-skill/
 
 ## Reference Documentation
 
-The skills include curated reference documentation from NautilusTrader:
+The skills include curated reference documentation from NautilusTrader, aligned with the official [Developer Guide](https://nautilustrader.io/docs/latest/developer_guide/):
+
+### Developer Guide
+- **Environment Setup** - Development environment, uv, Cap'n Proto, Rust toolchain
+- **Coding Standards** - Universal formatting, shell script portability, naming conventions
+- **Python** - PEP-8 compliance, type hints, NumPy docstrings, Ruff linting
+- **Rust** - Cargo conventions, error handling, async patterns, adapter runtime patterns
+- **Testing** - pytest, cargo-nextest, mixed debugging, coverage
+- **Adapters** - Rust-first adapter development, HTTP/WebSocket patterns
+- **Benchmarking** - Criterion and iai frameworks, flamegraph generation
+- **FFI Memory Contract** - CVec lifecycle, PyCapsule patterns
+- **Docs Style** - Documentation conventions and best practices
 
 ### API Reference
 - Trading, Execution, Risk APIs
@@ -232,9 +243,31 @@ For performance-critical code, the skills include Rust implementation patterns:
 
 - Module structure with proper documentation
 - `new_checked()` + `new()` constructor pattern
-- PyO3 bindings with naming conventions
+- PyO3 bindings with `py_*` prefix naming convention
 - FFI memory safety with `abort_on_panic`
 - CVec memory contract for Cython interop
+- Adapter runtime patterns with `get_runtime().spawn()`
+- Hash collections guidance (AHashMap vs HashMap vs DashMap)
+
+## Key Conventions (from Official Docs)
+
+### Python
+- Use PEP 604 union syntax: `Instrument | None` (not `Optional[Instrument]`)
+- NumPy docstring format with imperative mood
+- Type hints required on all function signatures
+- Use `ruff` for linting
+
+### Rust
+- Copyright header with current year (2015-2026)
+- Use `anyhow::bail!` for early error returns
+- Use `AHashMap` for hot paths, standard `HashMap` for network clients
+- Use `get_runtime().spawn()` instead of `tokio::spawn()` in adapters
+- No box-style banner comments
+
+### Testing
+- Use `pytest` for Python, `cargo-nextest` for Rust
+- Polling helpers (`eventually`, `wait_until_async`) instead of sleeps
+- Mixed debugging available via VS Code
 
 ## Contributing
 

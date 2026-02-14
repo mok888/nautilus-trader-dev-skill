@@ -33,6 +33,48 @@ while zero-cost abstractions and the absence of a garbage collector deliver C-li
   - `ffi`: enables C FFI bindings.
   - `stubs`: exposes testing stubs.
 
+## Build configurations
+
+To avoid unnecessary rebuilds during development, align cargo features, profiles, and flags across different build targets. Cargo's build cache is keyed by the exact combination of features, profiles, and flags—any mismatch triggers a full rebuild.
+
+### Aligned targets (testing and linting)
+
+| Target | Features | Profile | `--all-targets` | `--no-deps` | Purpose |
+|--------|----------|---------|-----------------|-------------|---------|
+| `cargo-test` | `ffi,python,high-precision,defi` | `nextest` | ✓ (implicit) | n/a | Run tests. |
+| `cargo-clippy` (pre-commit) | `ffi,python,high-precision,defi` | `nextest` | ✓ | n/a | Lint all code. |
+
+These targets share the same feature set and profile, allowing cargo to reuse compiled artifacts between linting and testing without rebuilds. The `nextest` profile is used to align with the workflow of the majority of core maintainers who use cargo-nextest for running tests.
+
+### Documentation builds
+
+Documentation is built separately using `make docs-rust`, which runs:
+
+```bash
+cargo +nightly doc --all-features --no-deps --workspace
+```
+
+This uses the nightly toolchain and `--all-features` rather than the aligned feature set above, so it does not share build artifacts with testing/linting.
+
+### Separate target (Python extension building)
+
+| Target | Features | Profile | Notes |
+|--------|----------|---------|-------|
+| `build` | Includes `extension-module` + subset | `release` | Requires different features for PyO3 extension module. |
+| `build-debug` | Includes `extension-module` + subset | `dev` | Requires different features for PyO3 extension module. |
+
+Python extension building intentionally uses different features (`extension-module` is required) and will trigger rebuilds. This is expected and unavoidable.
+
+### Rebuild triggers to avoid
+
+Mismatches in any of these cause full rebuilds:
+
+- Different feature combinations (e.g., `--features "a,b"` vs `--features "a,c"`).
+- Different `--no-default-features` usage (enables/disables default features).
+- Different profiles (e.g., `dev` vs `nextest` vs `release`).
+
+When adding new build targets or modifying existing ones, maintain alignment with the testing/linting group to preserve fast incremental builds.
+
 ## Module organization
 
 - Keep modules focused on a single responsibility.
@@ -48,7 +90,7 @@ All Rust files must include the standardized copyright header:
 
 ```rust
 // -------------------------------------------------------------------------------------------------
-//  Copyright (C) 2015-2025 Nautech Systems Pty Ltd. All rights reserved.
+//  Copyright (C) 2015-2026 Nautech Systems Pty Ltd. All rights reserved.
 //  https://nautechsystems.io
 //
 //  Licensed under the GNU Lesser General Public License Version 3.0 (the "License");
@@ -176,6 +218,46 @@ Use consistent async/await patterns:
 5. **Stream handling**: Use `tokio_stream` (or `futures::Stream`) for async iterators to make back-pressure explicit.
 6. **Timeout patterns**: Wrap network or long-running awaits with timeouts (`tokio::time::timeout`) and propagate or handle the timeout error.
 
+### Adapter runtime patterns
+
+Adapter crates (under `crates/adapters/`) require special handling for spawning async tasks due to Python FFI compatibility:
+
+1. **Use `get_runtime().spawn()` instead of `tokio::spawn()`**: When called from Python threads (which have no Tokio context), `tokio::spawn()` panics because it relies on thread-local storage. The global runtime pattern provides an explicit reference accessible from any thread.
+
+   ```rust
+   use nautilus_common::live::get_runtime;
+
+   // Correct - works from Python threads
+   get_runtime().spawn(async move {
+       // async work
+   });
+
+   // Incorrect - panics from Python threads
+   tokio::spawn(async move {
+       // async work
+   });
+   ```
+
+2. **Use the shorter import path**: Import `get_runtime` from the `live` module re-export, not the full path:
+
+   ```rust
+   // Preferred - shorter path via re-export
+   use nautilus_common::live::get_runtime;
+
+   // Avoid - unnecessarily verbose
+   use nautilus_common::live::runtime::get_runtime;
+   ```
+
+3. **Use `get_runtime().block_on()` for sync-to-async bridges**: When synchronous code needs to call async functions in adapters:
+
+   ```rust
+   fn sync_method(&self) -> anyhow::Result<()> {
+       get_runtime().block_on(self.async_implementation())
+   }
+   ```
+
+4. **Tests are exempt**: Test code using `#[tokio::test]` creates its own runtime context, so `tokio::spawn()` works correctly. The enforcement hook skips test files and test modules.
+
 ### Attribute patterns
 
 Consistent attribute usage and ordering:
@@ -275,17 +357,18 @@ pub const BAR_SPEC_1_MINUTE_LAST: BarSpecification = BarSpecification {
 
 ### Hash collections
 
-Prefer `AHashMap` and `AHashSet` from the `ahash` crate over the standard library's `HashMap` and `HashSet`:
+Use `AHashMap` and `AHashSet` from the `ahash` crate for performance-critical hot paths. For non-performance-critical code, standard `HashMap`/`HashSet` are preferred for simplicity:
 
 ```rust
+// For hot paths - using AHashMap/AHashSet
 use ahash::{AHashMap, AHashSet};
 
-// Preferred - using AHashMap/AHashSet
 let mut symbols: AHashSet<Symbol> = AHashSet::new();
 let mut prices: AHashMap<InstrumentId, Price> = AHashMap::new();
 
-// Instead of - standard library HashMap/HashSet
+// For non-hot paths - standard library HashMap/HashSet
 use std::collections::{HashMap, HashSet};
+
 let mut symbols: HashSet<Symbol> = HashSet::new();
 let mut prices: HashMap<InstrumentId, Price> = HashMap::new();
 ```
@@ -298,8 +381,81 @@ let mut prices: HashMap<InstrumentId, Price> = HashMap::new();
 
 **When to use standard `HashMap`/`HashSet`:**
 
+- **Non-performance-critical code**: For simple cases where performance is not critical (e.g., factory registries, configuration maps, test fixtures), standard `HashMap`/`HashSet` are acceptable and even preferred for simplicity.
 - **Cryptographic security required**: Use standard `HashMap` when hash flooding attacks are a concern (e.g., handling untrusted user input in network protocols).
-- **Network clients**: Currently prefer standard `HashMap` for network-facing components where security considerations outweigh performance benefits.
+- **Network clients**: Prefer standard `HashMap` for network-facing components where security considerations outweigh performance benefits.
+- **External library boundaries**: Use standard `HashMap` when interfacing with external libraries that expect it (e.g., Arrow serialization metadata).
+
+### Thread-safe hash map patterns
+
+`AHashMap` is not thread-safe. Wrapping it in `Arc` only enables sharing the pointer across threads but does not coordinate mutation. Use `Arc<AHashMap>` only when the map is immutable after construction, otherwise add proper synchronization.
+
+```rust
+// Avoid: Data races when multiple threads mutate
+let cache = Arc::new(AHashMap::new());
+let cache_clone = Arc::clone(&cache);
+tokio::spawn(async move {
+    cache_clone.insert(key, value);  // Data race
+});
+cache.insert(other_key, other_value);  // Data race
+```
+
+**Patterns:**
+
+1. **Immutable after construction** – Build the map once, then share it read-only:
+
+   ```rust
+   let mut map = AHashMap::new();
+   map.insert(key1, value1);
+   map.insert(key2, value2);
+   let shared_map = Arc::new(map);  // Now immutable
+
+   // Multiple threads can safely read
+   let map_clone = Arc::clone(&shared_map);
+   tokio::spawn(async move {
+       if let Some(value) = map_clone.get(&key1) {
+           // Safe read-only access
+       }
+   });
+   ```
+
+2. **Concurrent reads and writes** – Use `DashMap`:
+
+   ```rust
+   use dashmap::DashMap;
+
+   let cache: Arc<DashMap<K, V>> = Arc::new(DashMap::new());
+
+   // Multiple threads can safely read and write concurrently
+   cache.insert(key, value);
+   if let Some(entry) = cache.get(&key) {
+       // Safe concurrent access
+   }
+   ```
+
+   `DashMap` internally uses sharding and fine-grained locking for efficient concurrent access.
+
+3. **Single-threaded hot paths** – Use plain `AHashMap` in single-threaded contexts:
+
+   ```rust
+   struct Handler {
+       instruments: AHashMap<Ustr, InstrumentAny>,
+   }
+
+   impl Handler {
+       async fn next(&mut self) -> Option<()> {
+           // Handler runs on a single task, no concurrent access
+           self.instruments.insert(key, value);
+           Ok(())
+       }
+   }
+   ```
+
+**Decision tree:**
+
+- Immutable after construction → Use `Arc<AHashMap<K, V>>`
+- Concurrent access needed → Use `Arc<DashMap<K, V>>`
+- Single-threaded access → Use plain `AHashMap<K, V>`
 
 ### Re-export patterns
 
@@ -534,6 +690,26 @@ Use descriptive test names that explain the scenario:
 fn test_sma_with_no_inputs()
 fn test_sma_with_single_input()
 fn test_symbol_is_composite()
+```
+
+## Box-style banner comments
+
+Do not use box-style banner or separator comments. If code requires visual separation, consider splitting it into separate modules or files. Instead use:
+
+- Clear function names that convey purpose.
+- Module structure for logical groupings (`mod tests { mod fixtures { } }`).
+- Impl blocks to group related methods.
+- Doc comments (`///`) for semantic documentation.
+- IDE navigation and code folding.
+
+Patterns to avoid:
+
+```rust
+// ============================================================================
+// Some Section
+// ============================================================================
+
+// ========== Test Fixtures ==========
 ```
 
 ## Rust-Python memory management

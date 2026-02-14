@@ -42,28 +42,33 @@ free.
 
 ## Capsules created on the Rust side *(PyO3 bindings)*
 
-When Rust code pushes a heap-allocated value into Python it **must** use
-`PyCapsule::new_with_destructor` so that Python knows how to free the allocation
-once the capsule becomes unreachable. The closure/destructor is responsible
-for reconstructing the original `Box<T>` or `Vec<T>` and letting it drop.
+When Rust code pushes a heap-allocated value into Python it **must** use `PyCapsule::new_with_destructor` so that Python knows how to free the allocation once the capsule becomes unreachable. The closure/destructor is responsible for reconstructing the original `Box<T>` or `Vec<T>` and letting it drop.
 
 ```rust
-Python::attach(|py| {
-    // allocate the value on the heap
-    let my_data = MyStruct::new();
+use pyo3::types::PyCapsule;
 
-    // move it into the capsule and register a destructor
-    let capsule = pyo3::types::PyCapsule::new_with_destructor(py, my_data, None, |_, _| {})
-        .expect("capsule creation failed");
+Python::attach(|py| {
+    // Allocate the value on the heap
+    let my_data = Box::new(MyStruct::new());
+    let ptr = Box::into_raw(my_data);
+
+    // Move it into the capsule and register a destructor that frees the memory
+    let capsule = PyCapsule::new_with_destructor(
+        py,
+        ptr,
+        None,
+        |ptr, _| {
+            // Reconstruct the Box and let it drop, freeing the allocation
+            let _ = unsafe { Box::from_raw(ptr) };
+        },
+    )
+    .expect("capsule creation failed");
 
     // ... pass `capsule` back to Python ...
 });
 ```
 
-Do **not** use `PyCapsule::new(…, None)`; that variant registers *no* destructor
-and will leak memory unless the recipient manually extracts and frees the
-pointer (something we never rely on). The codebase has been updated to follow
-this rule everywhere – adding new FFI modules must follow the same pattern.
+Do **not** use `PyCapsule::new(…, None)`; that variant registers *no* destructor and will leak memory unless the recipient manually extracts and frees the pointer (something we never rely on). The codebase has been updated to follow this rule everywhere – adding new FFI modules must follow the same pattern.
 
 ## Why there is no generic `cvec_drop` anymore
 

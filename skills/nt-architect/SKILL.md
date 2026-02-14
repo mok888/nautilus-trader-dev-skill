@@ -265,6 +265,11 @@ Load these for detailed API information (relative to this skill folder):
 - `references/concepts/message_bus.md`
 - `references/concepts/data.md`
 
+For implementation patterns:
+- `references/developer_guide/python.md` - Python conventions
+- `references/developer_guide/adapters.md` - Adapter development guide
+- `references/developer_guide/coding_standards.md` - Style guide
+
 ## Next Step
 
 After architecture is defined, use **nt-implement** skill to implement components with templates.
