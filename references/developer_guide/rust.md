@@ -33,6 +33,47 @@ while zero-cost abstractions and the absence of a garbage collector deliver C-li
   - `ffi`: enables C FFI bindings.
   - `stubs`: exposes testing stubs.
 
+## Build configurations
+
+To avoid unnecessary rebuilds during development, align cargo features, profiles, and flags across different build targets. Cargo's build cache is keyed by the exact combination of features, profiles, and flags—any mismatch triggers a full rebuild.
+
+### Aligned targets (testing and linting)
+
+| Target | Features | Profile | `--all-targets` | `--no-deps` | Purpose |
+|--------|----------|---------|-----------------|-------------|---------|
+| `cargo-test` | `ffi,python,high-precision,defi` | `nextest` | ✓ (implicit) | n/a | Run tests. |
+| `cargo-clippy` | `ffi,python,high-precision,defi` | `nextest` | ✓ | ✓ | Lint code. |
+
+These targets share the same feature set and profile, allowing cargo to reuse compiled artifacts between linting and testing without rebuilds. The `nextest` profile is used to align with the workflow of the majority of core maintainers who use `cargo-nextest` for running tests.
+
+### Documentation builds
+
+Documentation is built separately using `make docs-rust`, which runs:
+
+```bash
+cargo +nightly doc --all-features --no-deps --workspace
+```
+
+This uses the nightly toolchain and `--all-features` rather than the aligned feature set above, so it does not share build artifacts with testing/linting.
+
+### Separate target (Python extension building)
+
+| Target | Features | Profile |
+|--------|----------|--------|
+| `build` | `extension-module` | `release` |
+| `build-debug` | `extension-module` | `dev` |
+
+Python extension building intentionally uses different features (`extension-module` is required) and will trigger rebuilds. This is expected and unavoidable.
+
+### Rebuild triggers to avoid
+
+Mismatches in any of these cause full rebuilds:
+- Different feature combinations (e.g., `--features "a,b"` vs `--features "a,c"`).
+- Different `--no-default-features` usage (enables/disables default features).
+- Different profiles (e.g., `dev` vs `nextest` vs `release`).
+
+When adding new build targets or modifying existing ones, maintain alignment with the testing/linting group to preserve fast incremental builds.
+
 ## Module organization
 
 - Keep modules focused on a single responsibility.
@@ -301,6 +342,75 @@ let mut prices: HashMap<InstrumentId, Price> = HashMap::new();
 - **Cryptographic security required**: Use standard `HashMap` when hash flooding attacks are a concern (e.g., handling untrusted user input in network protocols).
 - **Network clients**: Currently prefer standard `HashMap` for network-facing components where security considerations outweigh performance benefits.
 
+### Thread-safe hash map patterns
+
+`AHashMap` is not thread-safe. Wrapping it in `Arc` only enables sharing the pointer across threads but does not coordinate mutation. Use `Arc<AHashMap>` only when the map is immutable after construction, otherwise add proper synchronization.
+
+```rust
+// Avoid: Data races when multiple threads mutate
+let cache = Arc::new(AHashMap::new());
+let cache_clone = Arc::clone(&cache);
+tokio::spawn(async move {
+    cache_clone.insert(key, value); // Data race
+});
+cache.insert(other_key, other_value); // Data race
+```
+
+**Patterns:**
+
+1. **Immutable after construction** – Build the map once, then share it read-only:
+
+```rust
+let mut map = AHashMap::new();
+map.insert(key1, value1);
+map.insert(key2, value2);
+let shared_map = Arc::new(map);  // Now immutable
+
+// Multiple threads can safely read
+let map_clone = Arc::clone(&shared_map);
+tokio::spawn(async move {
+    if let Some(value) = map_clone.get(&key1) {
+        // Safe read-only access
+    }
+});
+```
+
+2. **Concurrent reads and writes** – Use `DashMap`:
+
+```rust
+use dashmap::DashMap;
+
+let cache: Arc<DashMap<K, V>> = Arc::new(DashMap::new());
+// Multiple threads can safely read and write concurrently
+cache.insert(key, value);
+if let Some(entry) = cache.get(&key) {
+    // Safe concurrent access
+}
+```
+
+`DashMap` internally uses sharding and fine-grained locking for efficient concurrent access.
+
+3. **Single-threaded hot paths** – Use plain `AHashMap` in single-threaded contexts:
+
+```rust
+struct Handler {
+    instruments: AHashMap<Ustr, InstrumentAny>,
+}
+
+impl Handler {
+    async fn next(&mut self) -> Option<()> {
+        // Handler runs on a single task, no concurrent access
+        self.instruments.insert(key, value);
+        Ok(())
+    }
+}
+```
+
+**Decision tree:**
+- Immutable after construction → Use `Arc<AHashMap<K, V>>`
+- Concurrent access needed → Use `Arc<DashMap<K, V>>`
+- Single-threaded access → Use plain `AHashMap<K, V>`
+
 ### Re-export patterns
 
 Organize re-exports alphabetically and place at the end of lib.rs files:
@@ -536,6 +646,66 @@ fn test_sma_with_single_input()
 fn test_symbol_is_composite()
 ```
 
+### Box-style banner comments
+
+Do not use box-style banner or separator comments. If code requires visual separation, consider splitting it into separate modules or files. Instead use:
+- Clear function names that convey purpose.
+- Module structure for logical groupings (`mod tests { mod fixtures { } }`).
+- Impl blocks to group related methods.
+- Doc comments (`///`) for semantic documentation.
+- IDE navigation and code folding.
+
+Patterns to avoid:
+
+```rust
+// ============================================================================
+// Some Section
+// ============================================================================
+// ========== Test Fixtures ==========
+```
+
+### Adapter runtime patterns
+
+Adapter crates (under `crates/adapters/`) require special handling for spawning async tasks due to Python FFI compatibility:
+
+1. **Use `get_runtime().spawn()` instead of `tokio::spawn()`**: When called from Python threads (which have no Tokio context), `tokio::spawn()` panics because it relies on thread-local storage. The global runtime pattern provides an explicit reference accessible from any thread.
+
+```rust
+use nautilus_common::live::get_runtime;
+
+// Correct - works from Python threads
+get_runtime().spawn(async move {
+    // async work
+});
+
+// Incorrect - panics from Python threads
+tokio::spawn(async move {
+    // async work
+});
+```
+
+2. **Use the shorter import path**: Import `get_runtime` from the `live` module re-export, not the full path:
+
+```rust
+// Preferred - shorter path via re-export
+use nautilus_common::live::get_runtime;
+
+// Avoid - unnecessarily verbose
+use nautilus_common::live::runtime::get_runtime;
+```
+
+3. **Use `get_runtime().block_on()` for sync-to-async bridges**: When synchronous code needs to call async functions in adapters:
+
+```rust
+fn sync_method(&self) -> anyhow::Result<()> {
+    get_runtime().block_on(self.async_implementation())
+}
+```
+
+4. **Tests are exempt**: Test code using `#[tokio::test]` creates its own runtime context, so `tokio::spawn()` works correctly. The enforcement hook skips test files and test modules.
+
+The `check_tokio_usage.sh` pre-commit hook enforces these adapter runtime patterns automatically.
+
 ## Rust-Python memory management
 
 When working with PyO3 bindings, it's critical to understand and avoid reference cycles between Rust's `Arc` reference counting and Python's garbage collector.
@@ -693,6 +863,38 @@ unsafe impl Send for MessageBus {}
   [FFI Memory Contract](ffi.md). Foreign code becomes the owner of the allocation and **must**
   call the matching `vec_drop_*` function exactly once.
 
+### Categories of unsafe code
+
+The codebase uses `unsafe` Rust in these categories:
+1. **FFI boundaries** – Raw pointer operations for C interop. See [FFI documentation](ffi.md).
+2. **Interior mutability** – `UnsafeCell` for thread-local registries with controlled access patterns.
+3. **Unsafe Send/Sync** – Types that are not inherently thread-safe but satisfy trait bounds through runtime invariants (e.g., single-threaded access guaranteed by architecture).
+
+### Unsafe Send/Sync requirements
+
+When implementing `Send` or `Sync` unsafely:
+
+1. Document exactly which fields violate the trait requirements.
+2. Explain the runtime mechanism that ensures safety (e.g., single-threaded event loop).
+3. Include a `WARNING` stating that violating the invariant is undefined behavior.
+4. Prefer runtime enforcement (assertions, `Result` returns) over documentation-only guarantees.
+
+```rust
+// SAFETY: Contains Rc<RefCell<...>> which is not thread-safe.
+// Single-threaded access guaranteed by the backtest engine architecture.
+// WARNING: Actually sending across threads is undefined behavior.
+#[allow(unsafe_code)]
+unsafe impl Send for BacktestDataClient {}
+```
+
+### Defense in depth
+
+Where unsafe code relies on invariants, add defense mechanisms:
+- **Type verification**: Check types at runtime before casting (e.g., `TypeId` comparison).
+- **Debug assertions**: Catch memory corruption early in debug builds.
+- **RAII guards**: Ensure cleanup on both normal return and panic paths.
+- **Runtime checks**: Fail fast when invariants are violated rather than proceeding unsafely.
+
 ## Tooling configuration
 
 The project uses several tools for code quality:
@@ -727,3 +929,101 @@ This ensures you're using the same Rust and clippy versions as CI.
 - [The Rust Reference – Unsafety](https://doc.rust-lang.org/stable/reference/unsafety.html).
 - [Safe Bindings in Rust – Russell Johnston](https://www.abubalay.com/blog/2020/08/22/safe-bindings-in-rust).
 - [Google – Rust and C interoperability](https://www.chromium.org/Home/chromium-security/memory-safety/rust-and-c-interoperability/).
+
+## Cap'n Proto serialization
+
+NautilusTrader uses [Cap'n Proto](https://capnproto.org/) for high-performance serialization in the Rust core.
+
+### Installing Cap'n Proto
+
+Install the Cap'n Proto compiler before working with schemas. The required version is specified in the `capnp-version` file in the repository root.
+
+See the [Environment Setup](environment_setup.md) guide for detailed installation instructions for each platform.
+
+:::warning
+Ubuntu's default `capnproto` package is too old. Linux users must install from source.
+:::
+
+Verify installation:
+
+```bash
+capnp --version  # Should match the version in capnp-version
+```
+
+### Schema development workflow
+
+Schema files live in `crates/serialization/schemas/capnp/`:
+
+- `common/` - Base types, identifiers, enums.
+- `commands/` - Trading commands.
+- `events/` - Order and position events.
+- `data/` - Market data types.
+
+When modifying schemas:
+
+1. Edit the `.capnp` schema file in the appropriate subdirectory.
+2. Regenerate Rust bindings:
+
+```bash
+make regen-capnp
+# or
+./scripts/regen_capnp.sh
+```
+
+3. Review changes:
+
+```bash
+git diff crates/serialization/generated/capnp
+```
+
+4. Update conversions in `crates/serialization/src/capnp/conversions.rs` if needed.
+5. Run tests:
+
+```bash
+make cargo-test EXTRA_FEATURES="capnp"
+```
+
+### Generated code
+
+Generated Rust files are checked into `crates/serialization/generated/capnp/` for these reasons:
+
+- **docs.rs compatibility**: The documentation build environment lacks the Cap'n Proto compiler.
+- **Contributor convenience**: Most developers don't need to install `capnp` for standard development.
+- **Build reproducibility**: Ensures consistent code generation across environments.
+
+The generated files are automatically created during builds via `build.rs` when the `capnp` feature is enabled, but they are committed to the repository to support builds without the compiler installed.
+
+### Verifying schema consistency
+
+Before committing schema changes, ensure generated files are up-to-date:
+
+```bash
+make check-capnp-schemas
+```
+
+This target:
+1. Regenerates all schema files.
+2. Verifies no uncommitted changes exist.
+3. Fails if schemas are out of sync.
+
+CI runs this check automatically to catch drift.
+
+### Testing with capnp feature
+
+```bash
+# Run workspace tests with capnp
+make cargo-test EXTRA_FEATURES="capnp"
+
+# Run specific crate tests with capnp
+make cargo-test-crate-nautilus-serialization FEATURES="capnp"
+
+# Run specific test
+cargo test -p nautilus-serialization --features capnp test_price_roundtrip
+```
+
+### Schema evolution guidelines
+
+- Only add new fields at the end of structs.
+- Never remove or reorder existing fields.
+- Use `@N` annotations to track field numbers explicitly.
+- Document compatibility constraints in schema comments.

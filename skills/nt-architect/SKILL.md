@@ -79,7 +79,7 @@ Research Element
 
 #### Message Bus Patterns
 
-**Signals** (lightweight, primitive values):
+**Signals** (lightweight, primitive values — str, float, int, bool, or bytes):
 ```python
 # Publisher (Actor)
 self.publish_signal(name="regime_state", value="trending", ts_event=ts)
@@ -91,25 +91,65 @@ def on_signal(self, signal):
         self.enable_trend_following()
 ```
 
-**Custom Data** (structured, complex values):
+**Custom Data with `@customdataclass`** (structured, complex values — auto-generated constructor):
 ```python
 from nautilus_trader.model.custom import customdataclass
 from nautilus_trader.core.data import Data
+from nautilus_trader.model.identifiers import InstrumentId
 
 @customdataclass
 class RegimeData(Data):
-    regime: str
-    confidence: float
-    transition_prob: float
+    instrument_id: InstrumentId = InstrumentId.from_str("BTCUSDT-PERP.BINANCE")
+    regime: str = "unknown"
+    confidence: float = 0.0
+    transition_prob: float = 0.0
 
 # Publisher (Actor)
-self.publish_data(RegimeData, data)
+self.publish_data(
+    DataType(RegimeData, metadata={"instrument_id": "BTCUSDT-PERP.BINANCE"}),
+    data,
+)
 
 # Subscriber (Strategy)
-self.subscribe_data(RegimeData)
+self.subscribe_data(
+    data_type=DataType(RegimeData, metadata={"instrument_id": "BTCUSDT-PERP.BINANCE"}),
+)
 def on_data(self, data: Data):
     if isinstance(data, RegimeData):
         self.handle_regime(data)
+```
+
+**Custom Data with manual `Data` subclass** (full control, explicit ts_event/ts_init):
+```python
+from nautilus_trader.core.data import Data
+
+class RegimeData(Data):
+    def __init__(self, regime: str, confidence: float, ts_event: int, ts_init: int) -> None:
+        self.regime = regime
+        self.confidence = confidence
+        self._ts_event = ts_event
+        self._ts_init = ts_init
+
+    @property
+    def ts_event(self) -> int:
+        return self._ts_event
+
+    @property
+    def ts_init(self) -> int:
+        return self._ts_init
+```
+
+**Order Fill/Cancel Subscriptions** (monitor trading activity from Actors):
+```python
+# Actor subscribes to order fills for an instrument
+self.subscribe_order_fills(instrument_id)
+def on_order_filled(self, event: OrderFilled) -> None:
+    self.log.info(f"Fill: {event.order_side} {event.last_qty} @ {event.last_px}")
+
+# Actor subscribes to order cancels for an instrument
+self.subscribe_order_cancels(instrument_id)
+def on_order_canceled(self, event: OrderCanceled) -> None:
+    self.log.info(f"Cancel: {event.client_order_id}")
 ```
 
 #### Typical Data Flow Patterns
@@ -251,10 +291,12 @@ After completing the design, produce a document with:
 ## Key Principles
 
 1. **Actors for ML, Strategies for Orders** - Never put model inference in Strategy
-2. **Signals for Simple, Data for Complex** - Use `publish_signal` for primitives, `publish_data` for structured data
+2. **Signals for Simple, Data for Complex** - Use `publish_signal` for primitives (str/float/int/bool/bytes), `publish_data` for structured data
 3. **Cache for Framework State** - Orders, positions, instruments live in Cache
 4. **Warmup Before Live** - Always `request_bars` before `subscribe_bars`
 5. **Single Thread Model** - Nautilus runs on single thread; no async model inference in hot path
+6. **Actor Subscriptions** - Actors can subscribe to order fills/cancels via `subscribe_order_fills()` / `subscribe_order_cancels()`
+7. **@customdataclass for Quick Custom Data** - Use `@customdataclass` decorator for auto-generated constructors; use manual `Data` subclass for full control
 
 ## References
 

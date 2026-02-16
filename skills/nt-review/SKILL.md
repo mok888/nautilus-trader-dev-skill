@@ -363,6 +363,14 @@ self.log.error(f"No signal")  # Not an error
 - No reconnection logic
 - Missing error handling
 - Not validating responses
+- Not following Rust-first architecture (OKX/BitMEX/Bybit patterns)
+- Using `tokio::spawn()` instead of `get_runtime().spawn()` in adapter code
+
+### Data Catalog
+- Not using `ParquetDataCatalog` for data persistence
+- Missing `BacktestDataConfig` for custom data
+- Not writing instruments to catalog before other data
+- Missing `metadata` dict for custom data types
 
 ## 5. Live Trading Review
 
@@ -575,6 +583,43 @@ tokio::spawn(async move { ... });
 - Not importing FAILED constant for `.expect()`
 - Using `HashMap` instead of `AHashMap` for non-security-critical code
 - Missing module-level documentation
+- Missing `#![deny(unsafe_op_in_unsafe_fn)]` crate-level lint
+
+### Unsafe Rust Policy Review
+
+Every crate that exposes FFI symbols must enable:
+```rust
+#![deny(unsafe_op_in_unsafe_fn)]
+```
+
+Check for:
+```rust
+// CORRECT: SAFETY comment on every unsafe block
+unsafe {
+    // SAFETY: The pointer is valid because it was just allocated by Box::new
+    let data = *Box::from_raw(ptr);
+}
+
+// WRONG: No SAFETY comment
+unsafe {
+    let data = *Box::from_raw(ptr);
+}
+```
+
+**Red flags:**
+- Missing `// SAFETY:` comments on `unsafe` blocks
+- No Safety section in doc comments for `unsafe fn`
+- Missing unit test coverage for unsafe code paths
+
+### Common Anti-Patterns
+
+| Anti-Pattern | Fix |
+|---|---|
+| `.clone()` in hot paths | Favour borrowing or `Arc` |
+| `.unwrap()` in production | Propagate with `?` or domain errors |
+| `String` when `&str` suffices | Minimize allocations |
+| Exposed interior mutability | Hide mutexes behind safe APIs |
+| Large structs in `Result<T, E>` | Box large error payloads |
 
 ### Adapter Runtime Patterns
 
@@ -741,6 +786,10 @@ handler: Option<Arc<PyObject>>,  // Memory leak!
 - [ ] `py_*` prefix on Rust function names
 - [ ] SAFETY comments on all unsafe blocks
 - [ ] `#[repr(C)]` on FFI types
+- [ ] `#![deny(unsafe_op_in_unsafe_fn)]` in crate root
+- [ ] Unit tests covering unsafe code paths
+- [ ] No `.clone()` in hot paths
+- [ ] No `.unwrap()` in production code
 
 ## 7. Benchmarking Review
 

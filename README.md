@@ -204,7 +204,7 @@ The skills include curated reference documentation from NautilusTrader, aligned 
 - Trading, Execution, Risk APIs
 - Data types and models (instruments, orders, positions)
 - Cache, Portfolio, Analysis modules
-- Adapter APIs for 10+ exchanges
+- Adapter APIs for 15+ exchanges (Binance, Bybit, OKX, BitMEX, Coinbase IntX, IB, dYdX, Databento, Betfair, Tardis, Polymarket, MT5, Hyperliquid, and more)
 
 ### Concepts
 - Architecture and design philosophy
@@ -248,6 +248,8 @@ For performance-critical code, the skills include Rust implementation patterns:
 - CVec memory contract for Cython interop
 - Adapter runtime patterns with `get_runtime().spawn()`
 - Hash collections guidance (AHashMap vs HashMap vs DashMap)
+- GIL-based cloning for Rust-Python memory management
+- Unsafe Rust safety policy (`#![deny(unsafe_op_in_unsafe_fn)]`)
 
 ## Key Conventions (from Official Docs)
 

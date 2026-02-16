@@ -25,6 +25,23 @@ Implement nautilus_trader components using correct patterns and templates. This 
 - **Market Data Handling**: Parse and process unique market data streams.
 - **API Interaction**: Best practices for interacting with exchange APIs.
 
+## Adapter Architecture (Rust-First)
+
+NautilusTrader adapters follow a **Rust-first** layered architecture:
+- **Rust core** (`crates/adapters/your_adapter/`): networking clients, performance-critical operations
+- **Python layer** (`nautilus_trader/adapters/your_adapter/`): integrates Rust clients into platform engines
+
+Canonical reference adapters: **OKX**, **BitMEX**, **Bybit**
+
+**7-Phase Implementation Sequence:**
+1. Rust core infrastructure (HTTP/WebSocket clients, types, config)
+2. Instrument definitions (parsing, normalization)
+3. Market data (quotes, trades, order books)
+4. Order execution (submit, modify, cancel)
+5. Advanced features (account events, position tracking)
+6. Configuration and factories
+7. Testing and documentation
+
 ## When to Use
 
 - After architecture is defined (via nt-architect)
@@ -100,6 +117,39 @@ class RegimeActor(Actor):
             self.model = msgspec.msgpack.decode(f.read(), type=ModelState)
 
         self.subscribe_bars(self.config.bar_type)
+```
+
+### Data Catalog Usage
+
+```python
+from nautilus_trader.persistence.catalog import ParquetDataCatalog
+
+# Initialize catalog
+catalog = ParquetDataCatalog("/path/to/catalog")
+
+# Write data
+catalog.write_data([instrument])  # Instruments
+catalog.write_data(bars)          # Bars, ticks, etc.
+
+# Read data
+bars = catalog.bars(bar_types=[bar_type])
+trades = catalog.trade_ticks(instrument_ids=[instrument_id])
+
+# Use in backtest config
+from nautilus_trader.config import BacktestDataConfig
+
+data_config = BacktestDataConfig(
+    catalog_path=str(catalog.path),
+    data_cls="nautilus_trader.model.data:Bar",
+    instrument_id="BTCUSDT-PERP.BINANCE",
+)
+
+# Custom data in catalog
+data_config = BacktestDataConfig(
+    catalog_path=str(catalog.path),
+    data_cls=MyDataPoint,
+    metadata={"some_optional_category": 1},
+)
 ```
 
 ### ONNX Model Inference
@@ -801,13 +851,67 @@ pub extern "C" fn custom_momentum_update(
 
 4. **Python Memory Management**:
    - Never use `Arc<PyObject>` (causes reference cycles)
-   - Use `clone_py_object()` for cloning Python callbacks
+   - Use `clone_py_object()` from `nautilus_core::python` for cloning Python callbacks
    - Implement manual `Clone` for callback-holding structs
+   - Use plain `PyObject` without `Arc` wrapper
+
+   ```rust
+   use nautilus_core::python::clone_py_object;
+
+   // CORRECT: Plain PyObject, manual Clone
+   struct CallbackHolder {
+       handler: Option<PyObject>,  // ✅ No Arc wrapper
+   }
+
+   impl Clone for CallbackHolder {
+       fn clone(&self) -> Self {
+           Self {
+               handler: self.handler.as_ref().map(clone_py_object),
+           }
+       }
+   }
+   ```
 
 5. **Testing**:
    - Use `#[rstest]` for all tests
    - No AAA separator comments
    - Use descriptive test names
+
+6. **Unsafe Rust Policy**:
+   - Every crate enables `#![deny(unsafe_op_in_unsafe_fn)]`
+   - Every `unsafe` block must have a `// SAFETY:` comment explaining validity
+   - Document Safety section in doc comments for unsafe functions
+   - Cover all unsafe blocks with unit tests
+
+7. **Common Anti-Patterns**:
+   - Avoid `.clone()` in hot paths – favour borrowing or `Arc`
+   - Avoid `.unwrap()` in production – propagate errors with `?`
+   - Avoid `String` when `&str` suffices – minimize allocations
+   - Avoid exposing interior mutability – hide mutexes behind safe APIs
+   - Avoid large structs in `Result<T, E>` – box large error payloads
+
+8. **Thread-safe Hash Maps** (see `references/developer_guide/rust.md`):
+   - `AHashMap` is **not** thread-safe; `Arc<AHashMap>` only for immutable-after-construction
+   - Use `DashMap` for concurrent reads and writes: `Arc<DashMap<K, V>>`
+   - Use plain `AHashMap` in single-threaded contexts (e.g., WebSocket handler hot path)
+
+9. **Adapter Async Runtime** (see `references/developer_guide/rust.md`):
+   - Use `get_runtime().spawn()` instead of `tokio::spawn()` in adapter crates
+   - Use `get_runtime().block_on()` for sync-to-async bridges
+   - Import from `nautilus_common::live::get_runtime` (shorter re-export path)
+   - Tests are exempt: `#[tokio::test]` creates its own runtime
+
+10. **Cap'n Proto Serialization** (see `references/developer_guide/rust.md`):
+    - Schema files in `crates/serialization/schemas/capnp/`
+    - Regenerate with `make regen-capnp` or `./scripts/regen_capnp.sh`
+    - Verify with `make check-capnp-schemas`; CI enforces consistency
+    - Test with `make cargo-test EXTRA_FEATURES="capnp"`
+
+11. **Fixed-point Precision** (see `references/concepts/data.md`):
+    - `Price` and `Quantity` use fixed-point arithmetic; raw values must be valid multiples
+    - Use `from_raw()` only with values from `.raw` field, Nautilus conversion functions, or Arrow data
+    - `FIXED_PRECISION` is `9` (standard) or `16` (high-precision mode)
+    - Legacy catalogs pre-Dec 2025 may have floating-point errors; Arrow decode auto-corrects
 
 ## Coding Standards
 
