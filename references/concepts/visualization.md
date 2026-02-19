@@ -39,15 +39,19 @@ completing a backtest run and provide immediate visual feedback on strategy perf
 
 ### Quick start
 
-Generate a tearsheet with default settings:
+Generate a tearsheet using the high-level `BacktestVisualizer` API:
 
 ```python
-from nautilus_trader.backtest.engine import BacktestEngine
+from nautilus_trader.analysis.visualizer import BacktestVisualizer
 
 # After running your backtest
-engine.run()
+visualizer = BacktestVisualizer(engine)
+visualizer.tearsheet(output_path="backtest_results.html")
+```
 
-# Generate tearsheet
+Or using the functional API:
+
+```python
 from nautilus_trader.analysis.tearsheet import create_tearsheet
 
 create_tearsheet(

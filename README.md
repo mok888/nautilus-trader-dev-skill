@@ -6,16 +6,33 @@ A collection of Claude Code skills for developing trading systems with [Nautilus
 
 These skills provide a structured workflow for implementing trading strategies, actors, indicators, and custom components in NautilusTrader. They encode best practices, correct patterns, and review checklists to help you write production-quality trading code. All skills are updated to comply with the official [NautilusTrader Developer Guide](https://nautilustrader.io/docs/latest/developer_guide/).
 
+## Skills Map
+
 ```
-┌─────────────────┐     ┌─────────────────┐     ┌─────────────────┐
-│  nt-architect   │────▶│  nt-implement   │────▶│   nt-review     │
-│                 │     │                 │     │                 │
-│ Design component│     │ Write code from │     │ Validate before │
-│ architecture    │     │ templates       │     │ deployment      │
-└─────────────────┘     └─────────────────┘     └─────────────────┘
+┌──────────────────────────────────────────────────────────────────────────┐
+│                                                                          │
+│   DESIGN                 IMPLEMENT              VALIDATE                 │
+│                                                                          │
+│  nt-architect  ──────► nt-implement ──────────► nt-review               │
+│                              │                                           │
+│  Design component            │ (use components in)                       │
+│  architecture                ▼                                           │
+│                        nt-strategy-builder ◄── nt-dex-adapter           │
+│                                                                          │
+│                        Wire & run systems       Build on-chain           │
+│                        (backtest, paper, live)  DEX venues               │
+│                                                                          │
+└──────────────────────────────────────────────────────────────────────────┘
 ```
 
-## Skills
+### Typical Workflows
+
+| Goal | Skills to use |
+|---|---|
+| New strategy from research | `nt-architect` → `nt-implement` → `nt-strategy-builder` → `nt-review` |
+| Backtest on historical data | `nt-strategy-builder` (backtest template) |
+| Build a DEX data/execution adapter | `nt-dex-adapter` → `nt-strategy-builder` (wire it in) → `nt-review` |
+| Review code before deployment | `nt-review` |
 
 ### nt-architect
 
@@ -80,6 +97,56 @@ These skills provide a structured workflow for implementing trading strategies, 
 6. **Rust/FFI** - Memory safety, style conventions, PyO3 bindings
 7. **Benchmarking** - Criterion/iai setup, profiling, optimization verification
 
+### nt-strategy-builder *(new)*
+
+**Purpose**: Wire components into running systems — backtest, paper, or live — with any mix of CeFi and DEX venues.
+
+**Use when**:
+- Setting up a `BacktestEngine` with catalog data and fill models
+- Launching a live `TradingNode` with reconciliation and persistence
+- Connecting a custom DEX adapter as a venue
+- Building a multi-venue strategy consuming data from 2+ sources
+
+**Templates included**:
+| Template | Purpose |
+|---|---|
+| `backtest_node.py` | Full backtest with catalog, venue config, fill model |
+| `live_node.py` | Production TradingNode with reconciliation + timeouts |
+| `paper_node.py` | Paper trading: real data, simulated execution |
+| `dex_venue_input.py` | DEX adapter wired as venue (backtest or live) |
+| `multi_venue_strategy.py` | Strategy consuming data from 2+ venues |
+
+**Rules**: `rules/dos_and_donts.md` — 25+ curated DO/DON'T rules with rationale
+
+**Tests**: `tests/` — backtest patterns, live config, DEX venue integration, multi-venue routing
+
+---
+
+### nt-dex-adapter *(new)*
+
+**Purpose**: Build a custom on-chain DEX adapter that fully integrates with NautilusTrader's adapter framework.
+
+**Use when**:
+- Connecting to an AMM (Uniswap V2/V3, Curve) or on-chain CLOB (dYdX v4, Hyperliquid)
+- Building wallet-signed order execution for on-chain venues
+- Synthesising order book data from AMM pool reserves
+
+**Templates included**:
+| Template | Purpose |
+|---|---|
+| `dex_config.py` | Config classes (SecretStr private key, sandbox_mode flag) |
+| `dex_instrument_provider.py` | On-chain pool → Nautilus instrument discovery |
+| `dex_data_client.py` | Pool polling → QuoteTick / TradeTick / OrderBookDelta |
+| `dex_exec_client.py` | Wallet-signed tx submission + receipt → order lifecycle events |
+| `dex_factory.py` | ClientFactory that registers adapter with TradingNode |
+| `dex_order_book_builder.py` | AMM constant-product formula → synthetic L2 order book |
+
+**Rules**: `rules/dos_and_donts.md` + `rules/compliance_checklist.md`
+
+**Tests**: `tests/` — instrument parsing, AMM price levels, structural compliance, backtest integration
+
+---
+
 ## Installation
 
 ### Option 1: Copy to Claude Code skills directory
@@ -93,6 +160,8 @@ cd nautilus-trader-dev-skill
 cp -r skills/nt-architect ~/.claude/skills/
 cp -r skills/nt-implement ~/.claude/skills/
 cp -r skills/nt-review ~/.claude/skills/
+cp -r skills/nt-strategy-builder ~/.claude/skills/
+cp -r skills/nt-dex-adapter ~/.claude/skills/
 ```
 
 ### Option 2: Symlink for easy updates
