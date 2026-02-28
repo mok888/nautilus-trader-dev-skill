@@ -12,7 +12,7 @@ Build production-grade DEX adapters identical in structure to built-in OKX/Bybit
 |----------|----------|
 | AMM (Uniswap, Curve) | Synthesize QuoteTick from reserves |
 | On-chain CLOB (dYdX v4) | Use dYdX adapter as reference |
-| Perp DEX (GMX) | CryptoPermanentContract instrument |
+| Perp DEX (GMX) | CryptoPerpetual instrument |
 
 ## DEX vs CeFi
 
@@ -32,6 +32,14 @@ Build production-grade DEX adapters identical in structure to built-in OKX/Bybit
 5. **Account Events** — Balance, position tracking
 6. **Config & Factory** — ClientFactory for TradingNode
 7. **Testing** — Unit + integration + compliance
+
+## ADAPTER CANONICAL CONTRACT (2026)
+
+- Keep phase order fixed: Rust infra -> instruments -> market data -> execution/reconciliation -> advanced -> config/factory -> tests/docs
+- Implement complete provider/data/exec method contracts before marking adapter ready
+- Use `get_runtime().spawn()` in adapter Rust runtime paths
+- Never use `Arc<PyObject>` in bindings; avoid blocking hot handlers
+- Prefer real payload fixtures and condition-based async waits in tests
 
 ## ARCHITECTURE
 
@@ -67,7 +75,7 @@ uv run pytest skills/nt-dex-adapter/tests/test_dex_compliance.py -v
 
 ## REFERENCE ADAPTERS
 
-Study: OKX, BitMEX, Bybit (built-in), dYdX, Hyperliquid
+Study: `_template`, OKX, BitMEX, Bybit (built-in), dYdX v4, Hyperliquid
 
 ## NEXT
 

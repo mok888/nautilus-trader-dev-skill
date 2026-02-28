@@ -1,7 +1,9 @@
 # PROJECT KNOWLEDGE BASE
 
-**Generated:** 2026-02-19
-**Stack:** Claude Code Skills for NautilusTrader Development
+**Generated:** 2026-02-28
+**Commit:** 5ab844d
+**Branch:** main
+**Stack:** Claude Code skills for NautilusTrader development
 
 ## OVERVIEW
 
@@ -37,6 +39,7 @@ nautilus-trader-dev-skill/
 | Find API docs | `references/api_reference/` | Per-module API reference |
 | Understand concepts | `references/concepts/` | backtesting, live, orders, cache |
 | Adapter dev guide | `references/developer_guide/adapters.md` | Rust-first pattern |
+| End-to-End Workflow | `docs/end_to_end_guide.md` | **NEW** Full walkthrough |
 
 ## SKILL WORKFLOW
 
@@ -53,7 +56,7 @@ nt-architect → nt-implement → nt-strategy-builder → nt-review
 4. **nt-dex-adapter** — (Optional) Build custom DEX adapter
 5. **nt-review** — Review before live deployment
 
-## CONVENTIONS
+## CONVENTIONS (PROJECT-SPECIFIC)
 
 ### Python
 - Ruff linting, 100 char lines
@@ -69,9 +72,10 @@ nt-architect → nt-implement → nt-strategy-builder → nt-review
 - No box-style banner comments
 
 ### Tooling
-- `uv` for dependency management (not pip)
+- `uv` for dependency management and test execution (not pip)
 - `cargo nextest` for Rust tests (not cargo test)
-- `msgspec.Struct` for serialization (faster than dataclasses)
+- `msgspec.Struct` favored for high-throughput serialization
+- Skills and references are markdown-first; keep guidance concise and executable
 
 ## ANTI-PATTERNS (CRITICAL)
 
@@ -87,6 +91,7 @@ nt-architect → nt-implement → nt-strategy-builder → nt-review
 | Unbounded lists | Memory leak |
 | `reconciliation=False` live | State drift |
 | `Arc<PyObject>` | Memory leak |
+| `prob_fill_on_stop` in FillModel | Deprecated API drift |
 
 ## COMMANDS
 
@@ -98,7 +103,7 @@ uv sync --active --all-groups --all-extras
 uv run --no-sync python build.py
 
 # Python tests
-pytest
+uv run pytest
 
 # Rust tests
 cargo nextest run --workspace --features 'python,ffi,high-precision,defi'

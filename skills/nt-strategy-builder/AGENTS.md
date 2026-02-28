@@ -33,6 +33,13 @@ Live market data?
 3. **Catalog Data** — ParquetDataCatalog for backtests
 4. **Multi-Venue** — Multiple data_clients + exec_clients
 
+## ADAPTER WIRING CONTRACT (2026)
+
+- Enable live order flow only after adapter phases 1-4 are complete
+- Require canonical factory signatures for data/exec wiring
+- Verify reconciliation/report generation paths before production mode
+- Block deploy when provider/data/exec contracts are incomplete
+
 ## SIMULATION MODELS
 
 ```python
