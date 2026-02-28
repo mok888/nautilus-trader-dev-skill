@@ -23,6 +23,22 @@ Validate nautilus_trader implementations against conventions, trading correctnes
 - When reviewing Rust core implementations or FFI bindings
 - When validating performance-critical code
 
+## Adapter Review Gate (2026 Guide Alignment)
+
+For adapter reviews, fail the review if any of the following are missing:
+
+- **Phase compliance**: implementation does not respect the 7-phase dependency order or lacks phase milestone evidence.
+- **Required interfaces**: missing `InstrumentProvider` async loaders, incomplete `LiveDataClient` contract, or missing `LiveExecutionClient` reconciliation/report methods.
+- **Factory/config contract**: no static `create(loop, name, config, msgbus, cache, clock)` or weak credential/env handling.
+- **Runtime/FFI safety**: `tokio::spawn()` misuse in adapter runtime paths, `Arc<PyObject>` usage, or blocking operations in hot handlers.
+- **Testing doctrine violations**: fabricated payload fixtures, sleep-based async timing, or missing adapter integration tests (`providers`, `data`, `execution`, `factories`).
+
+Adapter-specific review severity:
+
+- `Blocker`: runtime/FFI violations, missing reconciliation methods, missing credential safety.
+- `Major`: incomplete method contracts, missing integration test categories.
+- `Minor`: naming drift, doc/reference gaps with otherwise correct behavior.
+
 ## Review Dimensions
 
 ### 1. Nautilus Conventions

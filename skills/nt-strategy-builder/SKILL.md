@@ -47,6 +47,8 @@ Are you using live market data?
 
 NautilusTrader ships adapters for Binance, Bybit, OKX, Coinbase IntX, dYdX, IB, Databento, Tardis, and more.
 
+Use venue/integration availability from the current NautilusTrader release and prefer dYdX v4 guidance for on-chain CLOB workflows.
+
 ```python
 from nautilus_trader.adapters.binance.factories import BinanceLiveDataClientFactory
 from nautilus_trader.config import TradingNodeConfig, LiveDataEngineConfig
@@ -132,6 +134,18 @@ See `templates/multi_venue_strategy.py`.
    c. Configure data sources (catalog or live feeds)
 4. **Configure simulation models** (FillModel, MarginModel) for backtest realism
 5. **Review** with `nt-review` before live deployment
+
+## Adapter Wiring Contract (2026 Guide Alignment)
+
+When wiring any custom adapter into `TradingNode` or `BacktestEngine`, verify these invariants:
+
+- Adapter implementation reached at least phases 1-4 before live order flow is enabled.
+- Data and execution factories expose canonical static `create(loop, name, config, msgbus, cache, clock)` signatures.
+- Provider + data + execution method contracts are complete (no placeholder methods).
+- Reconciliation/report paths are enabled and validated before production mode.
+- Adapter tests include provider/data/execution/factory integration coverage using realistic fixture payloads.
+
+If any invariant fails, block deployment and return to `nt-dex-adapter` + `nt-review` loops.
 
 ## Simulation Model Patterns
 

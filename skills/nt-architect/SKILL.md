@@ -15,6 +15,18 @@ Translate research outputs (trained ML models + signal generation logic) into a 
 - Before implementing any Nautilus components
 - When designing a new trading system from research
 
+## Adapter-Aware Architecture Constraints (2026 Guide Alignment)
+
+If the architecture includes a custom or modified adapter, enforce these constraints in the design doc:
+
+- **Lifecycle ordering**: the architecture must preserve the adapter 7-phase dependency order.
+- **Boundary clarity**:
+  - Rust core owns networking, parsing, and performance-critical normalization.
+  - Python layer owns Nautilus integration (`InstrumentProvider`, `LiveDataClient`, `LiveExecutionClient`, factory wiring).
+- **Contract completeness**: include explicit method families for provider/data/execution clients so implementation cannot skip required methods.
+- **Runtime and safety assumptions**: record async/runtime rules (`get_runtime().spawn()` in adapter Rust paths, no blocking hot handlers, no `Arc<PyObject>` bindings).
+- **Validation plan by phase**: each architecture output should map phases to concrete milestone checks and test artifacts (fixtures, integration tests, reconciliation checks).
+
 ## Architecture Design Process
 
 ### Phase 1: Intake Research Outputs
