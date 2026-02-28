@@ -16,6 +16,12 @@ Replace 'MyDEX' with your actual DEX name throughout.
 """
 
 import asyncio
+import sys
+from pathlib import Path
+
+_TEMPLATE_DIR = Path(__file__).resolve().parent
+if str(_TEMPLATE_DIR) not in sys.path:
+    sys.path.append(str(_TEMPLATE_DIR))
 
 from nautilus_trader.cache.cache import Cache
 from nautilus_trader.common.component import LiveClock, MessageBus
@@ -33,8 +39,12 @@ from nautilus_trader.model.enums import AggressorSide
 from nautilus_trader.model.identifiers import ClientId, InstrumentId, TradeId, Venue
 from nautilus_trader.model.objects import Price, Quantity
 
-from .dex_config import MyDEXDataClientConfig
-from .dex_instrument_provider import MyDEXInstrumentProvider
+try:
+    from .dex_config import MyDEXDataClientConfig
+    from .dex_instrument_provider import MyDEXInstrumentProvider
+except ImportError:
+    from dex_config import MyDEXDataClientConfig
+    from dex_instrument_provider import MyDEXInstrumentProvider
 
 
 class MyDEXDataClient(LiveMarketDataClient):
@@ -137,9 +147,7 @@ class MyDEXDataClient(LiveMarketDataClient):
 
         self.log.info(f"Subscribing to quote ticks: {instrument_id}")
 
-        task = asyncio.ensure_future(
-            self._poll_pool_state(instrument_id)
-        )
+        task = asyncio.ensure_future(self._poll_pool_state(instrument_id))
         self._poll_tasks[instrument_id] = task
 
     async def _subscribe_trade_ticks(self, instrument_id: InstrumentId) -> None:
@@ -161,7 +169,9 @@ class MyDEXDataClient(LiveMarketDataClient):
         For AMM DEX: not applicable (AMM has no discrete order book).
         For on-chain CLOB DEX: subscribe to Maker/Taker events.
         """
-        self.log.info(f"OrderBookDelta subscription: {instrument_id} (AMM: derived from pool)")
+        self.log.info(
+            f"OrderBookDelta subscription: {instrument_id} (AMM: derived from pool)"
+        )
         # AMM implementation: synthesise L1 snapshot from pool reserves
         # CLOB implementation: subscribe to on-chain order events
 
@@ -259,8 +269,8 @@ class MyDEXDataClient(LiveMarketDataClient):
             raise ValueError(f"Instrument not found: {instrument_id}")
 
         # Adjust reserves for decimals
-        adjusted_r0 = reserve0 / (10 ** decimals0)
-        adjusted_r1 = reserve1 / (10 ** decimals1)
+        adjusted_r0 = reserve0 / (10**decimals0)
+        adjusted_r1 = reserve1 / (10**decimals1)
 
         if adjusted_r0 == 0:
             raise ValueError("reserve0 is zero — pool is empty")
@@ -269,14 +279,14 @@ class MyDEXDataClient(LiveMarketDataClient):
         fee_rate = float(instrument.taker_fee)
 
         # AMM effective buy/sell prices include fee
-        ask = mid_price * (1 + fee_rate)   # Cost to buy token0
-        bid = mid_price * (1 - fee_rate)   # Revenue from selling token0
+        ask = mid_price * (1 + fee_rate)  # Cost to buy token0
+        bid = mid_price * (1 - fee_rate)  # Revenue from selling token0
 
         return QuoteTick(
             instrument_id=instrument_id,
             bid_price=Price.from_str(f"{bid:.6f}"),
             ask_price=Price.from_str(f"{ask:.6f}"),
-            bid_size=Quantity.from_str(f"{adjusted_r0:.8f}"),    # Pool depth as size
+            bid_size=Quantity.from_str(f"{adjusted_r0:.8f}"),  # Pool depth as size
             ask_size=Quantity.from_str(f"{adjusted_r0:.8f}"),
             ts_event=self.clock.timestamp_ns(),
             ts_init=self.clock.timestamp_ns(),

@@ -14,11 +14,21 @@ from nautilus_trader.cache.cache import Cache
 from nautilus_trader.common.component import LiveClock
 from nautilus_trader.config import InstrumentProviderConfig
 from nautilus_trader.model.identifiers import InstrumentId, Symbol, Venue
-from nautilus_trader.model.instruments import CurrencyPair, CryptoPermanentContract
+from nautilus_trader.model.instruments import CurrencyPair
 from nautilus_trader.model.currencies import Currency
 from nautilus_trader.model.objects import Price, Quantity
 
-from .dex_config import MyDEXInstrumentProviderConfig
+try:
+    from .dex_config import MyDEXInstrumentProviderConfig
+except ImportError:
+    import importlib.util
+    from pathlib import Path
+
+    _cfg_path = Path(__file__).with_name("dex_config.py")
+    _spec = importlib.util.spec_from_file_location("dex_config", _cfg_path)
+    _mod = importlib.util.module_from_spec(_spec)
+    _spec.loader.exec_module(_mod)
+    MyDEXInstrumentProviderConfig = _mod.MyDEXInstrumentProviderConfig
 
 
 class MyDEXInstrumentProvider:
@@ -133,7 +143,7 @@ class MyDEXInstrumentProvider:
         return CurrencyPair(
             instrument_id=instrument_id,
             raw_symbol=Symbol(pool_symbol),
-            base_currency=None,               # AMM: no separate base currency object for now
+            base_currency=Currency.from_str(token0_symbol),
             quote_currency=Currency.from_str(token1_symbol),
             price_precision=6,
             size_precision=8,
@@ -141,7 +151,9 @@ class MyDEXInstrumentProvider:
             size_increment=Quantity.from_str("0.00000001"),
             lot_size=None,
             max_quantity=None,
-            min_quantity=Quantity.from_str(str(pool_metadata.get("min_trade_size", "0.001"))),
+            min_quantity=Quantity.from_str(
+                str(pool_metadata.get("min_trade_size", "0.001"))
+            ),
             max_notional=None,
             min_notional=None,
             max_price=None,
@@ -186,10 +198,12 @@ class MyDEXInstrumentProvider:
 
     def _load_sandbox_instruments(self) -> None:
         """Load synthetic instruments for testing (no chain connection required)."""
-        test_instrument = self._parse_pool_to_instrument({
-            "token0_symbol": "WETH",
-            "token1_symbol": "USDC",
-            "fee": 3000,         # 0.3%
-            "min_trade_size": "0.001",
-        })
+        test_instrument = self._parse_pool_to_instrument(
+            {
+                "token0_symbol": "WETH",
+                "token1_symbol": "USDC",
+                "fee": 3000,  # 0.3%
+                "min_trade_size": "0.001",
+            }
+        )
         self._instruments[test_instrument.id] = test_instrument

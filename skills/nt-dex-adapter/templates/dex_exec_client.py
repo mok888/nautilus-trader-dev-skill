@@ -16,7 +16,13 @@ Replace 'MyDEX' with your actual DEX name throughout.
 """
 
 import asyncio
+import sys
 from decimal import Decimal
+from pathlib import Path
+
+_TEMPLATE_DIR = Path(__file__).resolve().parent
+if str(_TEMPLATE_DIR) not in sys.path:
+    sys.path.append(str(_TEMPLATE_DIR))
 
 from nautilus_trader.cache.cache import Cache
 from nautilus_trader.common.component import LiveClock, MessageBus
@@ -41,10 +47,14 @@ from nautilus_trader.model.identifiers import (
 )
 from nautilus_trader.model.objects import AccountBalance, Money, Price, Quantity
 from nautilus_trader.model.orders import Order
-from nautilus_trader.model.reports import OrderStatusReport
+from nautilus_trader.execution.reports import OrderStatusReport
 
-from .dex_config import MyDEXExecClientConfig
-from .dex_instrument_provider import MyDEXInstrumentProvider
+try:
+    from .dex_config import MyDEXExecClientConfig
+    from .dex_instrument_provider import MyDEXInstrumentProvider
+except ImportError:
+    from dex_config import MyDEXExecClientConfig
+    from dex_instrument_provider import MyDEXInstrumentProvider
 
 
 class MyDEXExecutionClient(LiveExecutionClient):
@@ -119,7 +129,9 @@ class MyDEXExecutionClient(LiveExecutionClient):
         2. Loads initial account state from on-chain wallet
         3. Instruments must already be loaded by the data client
         """
-        self.log.info(f"Connecting to MyDEX execution (wallet: {self._config.wallet_address})")
+        self.log.info(
+            f"Connecting to MyDEX execution (wallet: {self._config.wallet_address})"
+        )
 
         # Fetch and report initial account state
         await self._update_account_state()
@@ -204,13 +216,19 @@ class MyDEXExecutionClient(LiveExecutionClient):
         # tx_hash = await self._signing_client.cancel_order(order.venue_order_id)
         # ...
 
-    async def _cancel_all_orders(self, instrument_id: InstrumentId | None = None) -> None:
+    async def _cancel_all_orders(
+        self, instrument_id: InstrumentId | None = None
+    ) -> None:
         """Cancel all open orders (AMM: usually no-op; perp DEX: close open positions)."""
         self.log.info("cancel_all_orders: not applicable for AMM DEX")
 
-    async def _modify_order(self, order: Order, quantity: Quantity | None = None, price: Price | None = None) -> None:
+    async def _modify_order(
+        self, order: Order, quantity: Quantity | None = None, price: Price | None = None
+    ) -> None:
         """Modify is not supported on most DEX venues."""
-        self.log.warning(f"Order modification not supported on DEX: {order.client_order_id}")
+        self.log.warning(
+            f"Order modification not supported on DEX: {order.client_order_id}"
+        )
 
     async def _query_order(self, client_order_id: ClientOrderId) -> None:
         """Query order status by checking on-chain tx receipt."""
@@ -308,9 +326,11 @@ class MyDEXExecutionClient(LiveExecutionClient):
                     trade_id=TradeId(tx_hash),
                     position_side=PositionSide.FLAT,
                     last_qty=order.quantity,
-                    last_px=Price.from_str("1.000000"),  # Replace with actual fill price
+                    last_px=Price.from_str(
+                        "1.000000"
+                    ),  # Replace with actual fill price
                     quote_currency=instrument.quote_currency if instrument else USDT,
-                    commission=Money(0, USDT),            # Replace with actual gas cost
+                    commission=Money(0, USDT),  # Replace with actual gas cost
                     liquidity_side=LiquiditySide.TAKER,
                     ts_event=self.clock.timestamp_ns(),
                     ts_init=self.clock.timestamp_ns(),

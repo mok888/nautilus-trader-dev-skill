@@ -10,7 +10,7 @@ from unittest.mock import MagicMock, AsyncMock
 
 from nautilus_trader.backtest.engine import BacktestEngine
 from nautilus_trader.backtest.models import FillModel
-from nautilus_trader.model.currencies import USDT, BTC
+from nautilus_trader.model.currencies import USDT, BTC, ETH
 from nautilus_trader.model.enums import AccountType, AssetClass, OmsType
 from nautilus_trader.model.identifiers import InstrumentId, Symbol, Venue
 from nautilus_trader.model.instruments import CurrencyPair
@@ -20,6 +20,7 @@ from nautilus_trader.test_kit.stubs.identifiers import TestIdStubs
 
 
 # ─── INSTRUMENT FIXTURES ───────────────────────────────────────────────────────
+
 
 @pytest.fixture
 def btcusdt_binance():
@@ -36,7 +37,7 @@ def eth_usdc_uniswap():
     return CurrencyPair(
         instrument_id=InstrumentId(Symbol("WETH-USDC"), Venue("UNISWAP_V3")),
         raw_symbol=Symbol("WETH-USDC"),
-        base_currency=None,   # ETH represented as WETH custom currency
+        base_currency=ETH,
         quote_currency=USDT,
         price_precision=6,
         size_precision=8,
@@ -51,7 +52,7 @@ def eth_usdc_uniswap():
         min_price=None,
         margin_init=Decimal("0"),
         margin_maint=Decimal("0"),
-        maker_fee=Decimal("0.003"),    # Uniswap 0.3% pool
+        maker_fee=Decimal("0.003"),  # Uniswap 0.3% pool
         taker_fee=Decimal("0.003"),
         ts_event=0,
         ts_init=0,
@@ -60,12 +61,12 @@ def eth_usdc_uniswap():
 
 # ─── FILL MODEL FIXTURES ───────────────────────────────────────────────────────
 
+
 @pytest.fixture
 def cefi_fill_model():
     """Realistic CeFi fill model."""
     return FillModel(
         prob_fill_on_limit=0.5,
-        prob_fill_on_stop=1.0,
         prob_slippage=0.2,
         random_seed=42,
     )
@@ -76,13 +77,13 @@ def dex_fill_model():
     """Realistic DEX fill model with higher slippage."""
     return FillModel(
         prob_fill_on_limit=0.25,
-        prob_fill_on_stop=1.0,
         prob_slippage=0.70,
         random_seed=42,
     )
 
 
 # ─── BACKTEST ENGINE FIXTURES ──────────────────────────────────────────────────
+
 
 @pytest.fixture
 def cefi_engine(btcusdt_binance, cefi_fill_model):

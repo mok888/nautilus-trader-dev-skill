@@ -16,6 +16,7 @@ from collections import deque
 from decimal import Decimal
 from typing import Optional
 from unittest.mock import MagicMock
+from types import MethodType
 
 from nautilus_trader.backtest.engine import BacktestEngine
 from nautilus_trader.model.currencies import USDT
@@ -88,7 +89,7 @@ class TestSpreadCalculation:
             max_position_size=1.0,
         )
 
-        strategy = MultiVenueStrategy.__new__(MultiVenueStrategy)
+        strategy = type("MockMultiVenue", (), {})()
         strategy.config = config
         strategy.primary_id = InstrumentId.from_str(config.primary_instrument_id)
         strategy.secondary_id = InstrumentId.from_str(config.secondary_instrument_id)
@@ -105,6 +106,14 @@ class TestSpreadCalculation:
         strategy.primary_instrument.make_qty = MagicMock(
             return_value=Quantity.from_str("0.01")
         )
+        strategy.on_quote_tick = MethodType(MultiVenueStrategy.on_quote_tick, strategy)
+        strategy._evaluate_spread = MethodType(
+            MultiVenueStrategy._evaluate_spread, strategy
+        )
+        strategy._handle_spread_opportunity = MethodType(
+            MultiVenueStrategy._handle_spread_opportunity, strategy
+        )
+        strategy._can_trade = MethodType(MultiVenueStrategy._can_trade, strategy)
         return strategy
 
     def _make_quote(self, instrument_id_str: str, bid: float, ask: float) -> QuoteTick:
@@ -148,7 +157,9 @@ class TestSpreadCalculation:
         strategy._handle_spread_opportunity = MagicMock()
 
         primary_q = self._make_quote("BTCUSDT-PERP.BINANCE", 50_000.0, 50_001.0)
-        secondary_q = self._make_quote("BTCUSDT-PERP.BYBIT", 50_002.0, 50_003.0)  # Only ~0.4 bps
+        secondary_q = self._make_quote(
+            "BTCUSDT-PERP.BYBIT", 50_002.0, 50_003.0
+        )  # Only ~0.4 bps
 
         strategy.on_quote_tick(primary_q)
         strategy.on_quote_tick(secondary_q)

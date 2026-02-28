@@ -13,15 +13,34 @@ Usage in TradingNode:
 Replace 'MyDEX' with your actual DEX name throughout.
 """
 
+import sys
+from pathlib import Path
+
+_TEMPLATE_DIR = Path(__file__).resolve().parent
+if str(_TEMPLATE_DIR) not in sys.path:
+    sys.path.append(str(_TEMPLATE_DIR))
+
 from nautilus_trader.cache.cache import Cache
 from nautilus_trader.common.component import LiveClock, MessageBus
 from nautilus_trader.live.factories import LiveDataClientFactory, LiveExecClientFactory
 from nautilus_trader.model.identifiers import AccountId, ClientId, Venue
 
-from .dex_config import MyDEXDataClientConfig, MyDEXExecClientConfig
-from .dex_data_client import MyDEXDataClient
-from .dex_exec_client import MyDEXExecutionClient
-from .dex_instrument_provider import MyDEXInstrumentProvider, MyDEXInstrumentProviderConfig
+try:
+    from .dex_config import MyDEXDataClientConfig, MyDEXExecClientConfig
+    from .dex_data_client import MyDEXDataClient
+    from .dex_exec_client import MyDEXExecutionClient
+    from .dex_instrument_provider import (
+        MyDEXInstrumentProvider,
+        MyDEXInstrumentProviderConfig,
+    )
+except ImportError:
+    from dex_config import MyDEXDataClientConfig, MyDEXExecClientConfig
+    from dex_data_client import MyDEXDataClient
+    from dex_exec_client import MyDEXExecutionClient
+    from dex_instrument_provider import (
+        MyDEXInstrumentProvider,
+        MyDEXInstrumentProviderConfig,
+    )
 
 
 VENUE_NAME = "MYDEX"  # ← Change to your actual venue name (e.g. "UNISWAP_V3")
@@ -30,6 +49,7 @@ VENUE_NAME = "MYDEX"  # ← Change to your actual venue name (e.g. "UNISWAP_V3")
 # =============================================================================
 # Data Client Factory
 # =============================================================================
+
 
 class MyDEXLiveDataClientFactory(LiveDataClientFactory):
     """
@@ -84,6 +104,7 @@ class MyDEXLiveDataClientFactory(LiveDataClientFactory):
 # =============================================================================
 # Execution Client Factory
 # =============================================================================
+
 
 class MyDEXLiveExecClientFactory(LiveExecClientFactory):
     """

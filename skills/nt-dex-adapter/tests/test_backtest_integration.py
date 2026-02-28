@@ -60,7 +60,6 @@ def dex_instrument():
 def dex_fill_model():
     return FillModel(
         prob_fill_on_limit=0.25,
-        prob_fill_on_stop=1.0,
         prob_slippage=0.70,
         random_seed=42,
     )
@@ -71,13 +70,15 @@ class TestDEXBacktestEngineIntegration:
 
     def test_engine_accepts_dex_instrument(self, dex_instrument, dex_fill_model):
         """BacktestEngine accepts a DEX instrument without error."""
+        base = dex_instrument.base_currency
+        quote = dex_instrument.quote_currency
         engine = BacktestEngine()
         engine.add_venue(
             venue=dex_instrument.id.venue,
             oms_type=OmsType.NETTING,
             account_type=AccountType.CASH,
-            base_currency=USDT,
-            starting_balances=[Money(10_000, USDT)],
+            base_currency=None,
+            starting_balances=[Money(10_000, quote), Money(10, base)],
             fill_model=dex_fill_model,
         )
         engine.add_instrument(dex_instrument)
@@ -85,14 +86,16 @@ class TestDEXBacktestEngineIntegration:
         engine.dispose()
 
     def test_engine_generates_account_report(self, dex_instrument, dex_fill_model):
+        base = dex_instrument.base_currency
+        quote = dex_instrument.quote_currency
         engine = BacktestEngine()
         venue = dex_instrument.id.venue
         engine.add_venue(
             venue=venue,
             oms_type=OmsType.NETTING,
             account_type=AccountType.CASH,
-            base_currency=USDT,
-            starting_balances=[Money(10_000, USDT)],
+            base_currency=None,
+            starting_balances=[Money(10_000, quote), Money(10, base)],
         )
         engine.add_instrument(dex_instrument)
         engine.run()
@@ -120,13 +123,15 @@ class TestDEXBacktestEngineIntegration:
 
     def test_dex_venue_with_zero_balance_initialises(self, dex_instrument):
         """Engine tolerates DEX venue starting with zero additional token balance."""
+        base = dex_instrument.base_currency
+        quote = dex_instrument.quote_currency
         engine = BacktestEngine()
         engine.add_venue(
             venue=dex_instrument.id.venue,
             oms_type=OmsType.NETTING,
             account_type=AccountType.CASH,
-            base_currency=USDT,
-            starting_balances=[Money(10_000, USDT)],  # USDT only
+            base_currency=None,
+            starting_balances=[Money(10_000, quote), Money(0, base)],
         )
         engine.add_instrument(dex_instrument)
         engine.run()

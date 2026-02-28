@@ -13,7 +13,7 @@ from decimal import Decimal
 
 from nautilus_trader.backtest.engine import BacktestEngine
 from nautilus_trader.backtest.models import FillModel
-from nautilus_trader.model.currencies import USDT
+from nautilus_trader.model.currencies import USDT, ETH, BTC
 from nautilus_trader.model.data import QuoteTick
 from nautilus_trader.model.enums import AccountType, OmsType
 from nautilus_trader.model.identifiers import InstrumentId, Symbol, Venue
@@ -23,6 +23,7 @@ from nautilus_trader.model.objects import Money, Price, Quantity
 
 # ─── DEX INSTRUMENT BUILDER ────────────────────────────────────────────────────
 
+
 def build_dex_instrument(pool_name: str, venue_name: str) -> CurrencyPair:
     """
     Build a synthetic Nautilus instrument representing an AMM pool.
@@ -31,7 +32,7 @@ def build_dex_instrument(pool_name: str, venue_name: str) -> CurrencyPair:
     return CurrencyPair(
         instrument_id=InstrumentId(Symbol(pool_name), Venue(venue_name)),
         raw_symbol=Symbol(pool_name),
-        base_currency=None,
+        base_currency=ETH,
         quote_currency=USDT,
         price_precision=6,
         size_precision=8,
@@ -64,8 +65,8 @@ class TestDEXasBacktestVenue:
             venue=Venue("UNISWAP_V3"),
             oms_type=OmsType.NETTING,
             account_type=AccountType.CASH,
-            base_currency=USDT,
-            starting_balances=[Money(10_000, USDT)],
+            base_currency=None,
+            starting_balances=[Money(10_000, USDT), Money(10, ETH)],
         )
         engine.add_instrument(instrument)
         engine.run()
@@ -75,13 +76,11 @@ class TestDEXasBacktestVenue:
         """DEX fill model has higher slippage than CeFi model."""
         dex_model = FillModel(
             prob_fill_on_limit=0.25,
-            prob_fill_on_stop=1.0,
             prob_slippage=0.70,
             random_seed=42,
         )
         cefi_model = FillModel(
             prob_fill_on_limit=0.5,
-            prob_fill_on_stop=1.0,
             prob_slippage=0.2,
             random_seed=42,
         )
@@ -97,11 +96,10 @@ class TestDEXasBacktestVenue:
             venue=Venue("UNISWAP_V3"),
             oms_type=OmsType.NETTING,
             account_type=AccountType.CASH,
-            base_currency=USDT,
-            starting_balances=[Money(10_000, USDT)],
+            base_currency=None,
+            starting_balances=[Money(10_000, USDT), Money(10, ETH)],
             fill_model=FillModel(
                 prob_fill_on_limit=0.25,
-                prob_fill_on_stop=1.0,
                 prob_slippage=0.70,
                 random_seed=42,
             ),
@@ -126,15 +124,15 @@ class TestDEXasBacktestVenue:
             venue=Venue("UNISWAP_V3"),
             oms_type=OmsType.NETTING,
             account_type=AccountType.CASH,
-            base_currency=USDT,
-            starting_balances=[Money(10_000, USDT)],
+            base_currency=None,
+            starting_balances=[Money(10_000, USDT), Money(10, ETH)],
         )
         engine.add_venue(
             venue=Venue("BINANCE"),
             oms_type=OmsType.NETTING,
             account_type=AccountType.CASH,
-            base_currency=USDT,
-            starting_balances=[Money(10_000, USDT)],
+            base_currency=None,
+            starting_balances=[Money(10_000, USDT), Money(1, BTC)],
         )
         engine.add_instrument(dex_instrument)
         engine.add_instrument(cefi_instrument)
