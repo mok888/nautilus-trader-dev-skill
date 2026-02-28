@@ -42,6 +42,25 @@ Canonical reference adapters: **OKX**, **BitMEX**, **Bybit**
 6. Configuration and factories
 7. Testing and documentation
 
+## Adapter Canonical Contract (2026 Guide Alignment)
+
+When implementing adapters, enforce these constraints across all templates and generated code:
+
+- **Do phases in order** and complete each milestone before progressing.
+- **Implement required Python interfaces completely**:
+  - `InstrumentProvider`: `load_all_async`, `load_ids_async`, `load_async`
+  - `LiveDataClient`: `_connect`, `_disconnect`, `_subscribe`, `_unsubscribe`, `_request`
+  - `LiveExecutionClient`: submit/modify/cancel methods and all reconciliation report generators
+- **Use official factory signature** for data/exec factories: `create(loop, name, config, msgbus, cache, clock)`.
+- **Follow runtime and FFI safety rules**:
+  - use `get_runtime().spawn()` for adapter Rust async tasks
+  - avoid `Arc<PyObject>` in bindings
+  - keep lock-heavy structures out of hot message paths
+- **Enforce modern testing doctrine**:
+  - use real captured payload fixtures (docs/live API), not invented schemas
+  - avoid arbitrary sleeps in async tests; use condition-based waiting
+  - cover Rust unit+integration and Python integration (`providers`, `data`, `execution`, `factories`)
+
 ## When to Use
 
 - After architecture is defined (via nt-architect)

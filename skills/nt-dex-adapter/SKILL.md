@@ -13,6 +13,27 @@ Once built, your adapter is consumed by the `nt-strategy-builder` skill's `dex_v
 
 **Canonical CeFi reference adapters**: OKX, BitMEX, Bybit — study their Python layer and Rust core before customising.
 
+## Adapter Canonical Contract (2026 Guide Alignment)
+
+Treat these as non-negotiable for custom adapters:
+
+- **Phase order is fixed**: 1) Rust infra, 2) instruments, 3) market data, 4) execution + reconciliation, 5) advanced features, 6) config + factories, 7) tests + docs.
+- **Python layer contracts are mandatory**:
+  - `InstrumentProvider`: `load_all_async`, `load_ids_async`, `load_async`
+  - `LiveDataClient`: `_connect`, `_disconnect`, `_subscribe`, `_unsubscribe`, `_request`
+  - `LiveExecutionClient`: order operations plus report/reconciliation methods (`generate_order_status_report(s)`, `generate_fill_reports`, `generate_position_status_reports`, `generate_mass_status`)
+- **Runtime and FFI invariants**:
+  - Use `get_runtime().spawn()` in adapter Rust tasks (do not use `tokio::spawn()` from Python-driven flows)
+  - Do not use `Arc<PyObject>` in adapter bindings; use `PyObject` and clone helpers
+  - Keep websocket command/event flow lock-free in hot paths
+- **Factory and config standards**:
+  - Implement adapter data/exec factory classes with static `create(loop, name, config, msgbus, cache, clock)`
+  - Keep config defaults and env-based credential resolution explicit
+- **Testing doctrine**:
+  - Use real payload fixtures from docs/live captures (no fabricated payload schemas)
+  - Prefer condition-based async waiting over arbitrary sleeps
+  - Cover Rust unit + integration and Python integration (`data`, `execution`, `providers`, `factories`)
+
 ## When to Use
 
 | DEX Type | Notes |
@@ -134,6 +155,16 @@ Every adapter must clear `rules/compliance_checklist.md` before use. Run the str
 uv run pytest skills/nt-dex-adapter/tests/test_dex_compliance.py -v
 ```
 
+Required checks before claiming adapter readiness:
+
+- [ ] 7 phases completed in order and each milestone satisfied
+- [ ] Provider/data/exec method contracts implemented (no placeholder `pass`)
+- [ ] `get_runtime().spawn()` used for Rust async tasks
+- [ ] No `Arc<PyObject>` in bindings
+- [ ] Credentials resolved via config/env without plain-text key leakage
+- [ ] Fixture payloads sourced from real upstream docs/live captures
+- [ ] Async tests avoid arbitrary sleep and use condition-based waiting
+
 ## Modern Tooling Standards
 - **Dependencies**: Use `uv` for managing the adapter dev environment.
 - **Serialization**: For internal data passing, `msgspec` structs are faster than standard classes.
@@ -156,8 +187,9 @@ Load these for detailed API information (relative to nt-implement skill folder):
 - `references/developer_guide/rust.md` — Rust conventions, async runtime patterns
 - `references/developer_guide/ffi.md` — FFI memory contract, CVec, abort_on_panic
 - `references/api_reference/live.md` — LiveMarketDataClient, LiveExecutionClient APIs
-- `references/integrations/dydx.md` — On-chain CLOB reference adapter
+- `references/integrations/dydx.md` — On-chain CLOB reference adapter (v4)
 - `references/integrations/hyperliquid.md` — DEX perp reference adapter
+- `nautilus_trader/adapters/_template/` — Canonical adapter skeleton
 
 ## Next Steps
 
