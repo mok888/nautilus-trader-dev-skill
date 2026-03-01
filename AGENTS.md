@@ -3,11 +3,11 @@
 **Generated:** 2026-02-28
 **Commit:** 5ab844d
 **Branch:** main
-**Stack:** Claude Code skills for NautilusTrader development
+**Stack:** Codex skills for NautilusTrader development
 
 ## OVERVIEW
 
-Claude Code skills repository for building production-grade trading systems with NautilusTrader. Contains 6 specialized skills covering architecture → implementation → integration → execution → review workflow, plus reference documentation and templates.
+Codex skills repository for building production-grade trading systems with NautilusTrader. Contains 6 specialized skills covering architecture → implementation → integration → execution → review workflow, plus reference documentation and templates.
 
 ## STRUCTURE
 
@@ -118,6 +118,6 @@ uv run pytest skills/nt-dex-adapter/tests/ -v
 ## NOTES
 
 - This is a **skills repo**, not the nautilus-trader source code
-- Skills are consumed by Claude Code via SKILL.md files
+- Skills are consumed by Codex via SKILL.md files
 - Templates use `asyncio.run(main())` pattern (no CLI framework)
 - Copyright headers: 2015-2026
