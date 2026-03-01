@@ -27,6 +27,16 @@ If the architecture includes a custom or modified adapter, enforce these constra
 - **Runtime and safety assumptions**: record async/runtime rules (`get_runtime().spawn()` in adapter Rust paths, no blocking hot handlers, no `Arc<PyObject>` bindings).
 - **Validation plan by phase**: each architecture output should map phases to concrete milestone checks and test artifacts (fixtures, integration tests, reconciliation checks).
 
+## EvoMap Integration Boundary (Optional)
+
+If the system integrates with `evomap.ai`, model it as an **external advisory sidecar** and keep Nautilus as the sole execution authority:
+
+- **Execution authority stays local**: only Strategy/Actor logic inside Nautilus can affect orders.
+- **Advisory-only contract**: EvoMap outputs are suggestions, never auto-applied trading rule changes.
+- **Non-blocking architecture**: publish/fetch/report flows must run off the hot trading path.
+- **Deterministic fallback**: define behavior when EvoMap is unavailable (continue local strategy, log degraded mode).
+- **Provenance**: include IDs linking internal decisions to external suggestion snapshots.
+
 ## Architecture Design Process
 
 ### Phase 1: Intake Research Outputs
@@ -298,6 +308,13 @@ After completing the design, produce a document with:
 ## Warmup Requirements
 - FeatureIndicator: 50 bars
 - HMM RegimeActor: 100 bars historical inference
+
+## EvoMap Integration Plan (optional)
+- Capsule/session identity mapping: [internal run id -> external capsule id]
+- Publish triggers: [which events are exported and why]
+- Fetch cadence: [on_timer / phase boundary, never hot handler blocking]
+- Approval gate: [human/operator review requirements before behavior change]
+- Fallback mode: [exact degraded behavior when EvoMap is down]
 ```
 
 ## Key Principles
@@ -309,6 +326,7 @@ After completing the design, produce a document with:
 5. **Single Thread Model** - Nautilus runs on single thread; no async model inference in hot path
 6. **Actor Subscriptions** - Actors can subscribe to order fills/cancels via `subscribe_order_fills()` / `subscribe_order_cancels()`
 7. **@customdataclass for Quick Custom Data** - Use `@customdataclass` decorator for auto-generated constructors; use manual `Data` subclass for full control
+8. **External Advisory Isolation** - Keep EvoMap or any external intelligence path advisory and asynchronous, never execution-critical
 
 ## References
 

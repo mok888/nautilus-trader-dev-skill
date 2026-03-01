@@ -39,6 +39,22 @@ Adapter-specific review severity:
 - `Major`: incomplete method contracts, missing integration test categories.
 - `Minor`: naming drift, doc/reference gaps with otherwise correct behavior.
 
+## EvoMap Integration Review Gate (Optional)
+
+If the system integrates with `evomap.ai`, fail the review if any of the following are present:
+
+- **Execution coupling**: EvoMap availability can directly block or alter order execution in hot handlers.
+- **Auto-apply behavior**: suggestions are merged into live strategy rules without explicit approval.
+- **No degraded-mode plan**: missing deterministic fallback behavior when EvoMap is down.
+- **No provenance**: missing traceability for exported payloads and accept/reject decisions.
+- **Unsafe payload scope**: credentials or unnecessary account-sensitive fields are exported.
+
+EvoMap-specific review severity:
+
+- `Blocker`: execution coupling, auto-apply behavior, secret leakage.
+- `Major`: missing fallback/provenance controls.
+- `Minor`: naming/documentation drift with otherwise safe behavior.
+
 ## Review Dimensions
 
 ### 1. Nautilus Conventions
@@ -327,6 +343,7 @@ self.log.error(f"No signal")  # Not an error
 - [ ] `on_stop` cancels orders and unsubscribes
 - [ ] Type hints on all methods
 - [ ] No blocking calls in handlers
+- [ ] External integrations (if any) are advisory-only and non-blocking
 
 ### Full Review (15-30 min)
 
@@ -512,6 +529,7 @@ def on_order_filled(self, event: OrderFilled) -> None:
 - [ ] External order claims configured if resuming
 - [ ] All order lifecycle events handled
 - [ ] Reconnection logic in adapters
+- [ ] EvoMap (if enabled) has explicit fallback, approval gate, and provenance logging
 
 ### Risk Controls
 
@@ -537,6 +555,7 @@ def on_bar(self, bar: Bar) -> None:
 - No position limits configured
 - No circuit breaker or emergency stop logic
 - Not handling `on_position_limit_breached` event
+- External advisory system can mutate live execution rules without operator approval
 
 ### Exchange Specifics
 

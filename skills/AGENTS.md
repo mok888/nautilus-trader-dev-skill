@@ -1,13 +1,13 @@
 # SKILLS OVERVIEW
 
-5 specialized skills for NautilusTrader development. Follow the workflow sequence.
+6 specialized skills for NautilusTrader development. Follow the workflow sequence.
 
 ## WORKFLOW
 
 ```
 nt-architect → nt-implement → nt-strategy-builder → nt-review
-                                        ↓
-                                  nt-dex-adapter (if DEX)
+                    ↓                    ↓
+      nt-evomap-integration (if EvoMap)  nt-dex-adapter (if DEX)
 ```
 
 ## SKILL INDEX
@@ -16,6 +16,7 @@ nt-architect → nt-implement → nt-strategy-builder → nt-review
 |-------|---------|-------------|
 | **nt-architect** | Decompose system into Actor/Indicator/Strategy | `nt-architect/SKILL.md` |
 | **nt-implement** | Implement Strategy/Actor/Indicator components | `nt-implement/SKILL.md` |
+| **nt-evomap-integration** | Integrate EvoMap advisory sidecar safely | `nt-evomap-integration/SKILL.md` |
 | **nt-strategy-builder** | Wire BacktestEngine/TradingNode | `nt-strategy-builder/SKILL.md` |
 | **nt-dex-adapter** | Build custom DEX adapter | `nt-dex-adapter/SKILL.md` |
 | **nt-review** | Pre-deployment code review | `nt-review/SKILL.md` |

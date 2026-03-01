@@ -133,7 +133,21 @@ See `templates/multi_venue_strategy.py`.
    b. Configure venues (CeFi builtin or DEX via `nt-dex-adapter`)
    c. Configure data sources (catalog or live feeds)
 4. **Configure simulation models** (FillModel, MarginModel) for backtest realism
-5. **Review** with `nt-review` before live deployment
+5. **Integrate optional EvoMap sidecar** (advisory only):
+   a. Export bounded strategy/actor artifacts via sidecar client
+   b. Fetch suggestions on timer boundaries (not in hot handlers)
+   c. Require explicit approval gate before strategy behavior changes
+6. **Review** with `nt-review` before live deployment
+
+## EvoMap Sidecar Wiring (Optional)
+
+Use `evomap.ai` as an external refinement source while preserving local trading determinism:
+
+- Keep EvoMap calls off execution-critical paths (`on_bar`, `on_quote_tick`, `on_order_book_deltas`).
+- Publish only necessary fields (avoid full account or secret context leakage).
+- Use periodic sync (`on_timer`) and bounded queues to prevent memory growth.
+- Record suggestion provenance (`capsule_id`, suggestion hash, decision reason) for post-trade audit.
+- If EvoMap is unavailable, continue with local strategy logic and emit degraded-mode telemetry.
 
 ## Adapter Wiring Contract (2026 Guide Alignment)
 
@@ -218,6 +232,7 @@ See `rules/dos_and_donts.md` for the full curated ruleset with rationale.
 - ❌ Never assume `self.cache.instrument()` is non-None
 - ❌ Never use raw `float` for Price/Quantity on instrument
 - ❌ Never set `reconciliation=False` for live trading without documented justification
+- ❌ Never auto-apply EvoMap suggestions directly to live execution behavior
 - ❌ Never put ML inference inside Strategy (use Actor)
 - ❌ Never use `datetime.utcnow()` — use `self.clock.utc_now()`
 

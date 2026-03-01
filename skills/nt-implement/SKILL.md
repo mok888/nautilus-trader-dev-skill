@@ -82,6 +82,39 @@ When implementing adapters, enforce these constraints across all templates and g
    - Portfolio Statistics (for analysis)
 3. Validate each component before proceeding
 
+## EvoMap Sidecar Implementation Pattern (Optional)
+
+If your Nautilus system integrates with `evomap.ai`, implement it as a sidecar module, not as trading-loop logic:
+
+- Create a dedicated gateway client (for example, `EvoMapCapsuleClient`) and keep protocol concerns outside Strategy/Actor signal math.
+- Map internal artifacts (feature deltas, design snapshots, decision outcomes) into explicit payload builders.
+- Run publish/fetch/report on timers or background workers; handlers should only enqueue lightweight events.
+- Enforce a policy layer: allowlisted payload fields, retry limits, and fail-closed behavior.
+- Persist provenance (`event_id`, `capsule_id`, suggestion hash, accept/reject reason) for auditability.
+
+```python
+from collections import deque
+
+class RegimeActor(Actor):
+    def __init__(self, config: RegimeActorConfig) -> None:
+        super().__init__(config)
+        self._evomap_queue: deque[dict] = deque(maxlen=10_000)
+
+    def on_start(self) -> None:
+        self._evomap = EvoMapCapsuleClient(base_url=self.config.evomap_url, api_key=self.config.evomap_api_key)
+        self.set_timer("evomap-sync", interval=self.config.evomap_sync_interval_ns)
+
+    def on_bar(self, bar: Bar) -> None:
+        signal = self._compute_signal(bar)
+        self._evomap_queue.append({"ts": bar.ts_event, "signal": signal})
+
+    def on_timer(self, event: TimeEvent) -> None:
+        if event.name != "evomap-sync" or not self._evomap_queue:
+            return
+        batch = [self._evomap_queue.popleft() for _ in range(min(50, len(self._evomap_queue)))]
+        self._evomap.publish({"events": batch})
+```
+
 ## Templates
 
 ### Quick Reference: Which Template?

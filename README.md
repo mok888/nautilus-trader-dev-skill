@@ -30,6 +30,7 @@ These skills provide a structured workflow for implementing trading strategies, 
 | Goal | Skills to use |
 |---|---|
 | New strategy from research | `nt-architect` → `nt-implement` → `nt-strategy-builder` → `nt-review` |
+| Integrate `evomap.ai` advisory loop | `nt-architect` → `nt-evomap-integration` → `nt-strategy-builder` → `nt-review` |
 | Backtest on historical data | `nt-strategy-builder` (backtest template) |
 | Build a DEX data/execution adapter | `nt-dex-adapter` → `nt-strategy-builder` (wire it in) → `nt-review` |
 | Review code before deployment | `nt-review` |
@@ -48,6 +49,7 @@ These skills provide a structured workflow for implementing trading strategies, 
 - Data flow patterns (signals vs custom data)
 - State management guidance
 - Lifecycle and warmup planning
+- Optional `evomap.ai` integration boundary (advisory-only, asynchronous, fail-safe)
 
 ### nt-implement
 
@@ -64,6 +66,7 @@ These skills provide a structured workflow for implementing trading strategies, 
 - Custom model templates (fill simulation, margin calculation, portfolio statistics)
 - Rust+PyO3 implementation patterns with FFI memory safety
 - Common patterns (model loading, ONNX inference, multi-timeframe data)
+- Optional sidecar pattern for `evomap.ai` publish/fetch/report flows
 
 **Templates included**:
 | Template | Purpose |
@@ -97,9 +100,29 @@ These skills provide a structured workflow for implementing trading strategies, 
 6. **Rust/FFI** - Memory safety, style conventions, PyO3 bindings
 7. **Benchmarking** - Criterion/iai setup, profiling, optimization verification
 
+**Optional integration gate**:
+- If `evomap.ai` is enabled, verify advisory-only behavior, fallback mode, approval gates, and full decision provenance.
+
 ### nt-strategy-builder *(new)*
 
 **Purpose**: Wire components into running systems — backtest, paper, or live — with any mix of CeFi and DEX venues.
+
+Includes optional `evomap.ai` sidecar wiring guidance for asynchronous publish/fetch/report loops.
+
+### nt-evomap-integration *(new)*
+
+**Purpose**: Implement and govern `evomap.ai` advisory integration for NautilusTrader without coupling external services to execution-critical paths.
+
+**Use when**:
+- Exporting strategy or actor artifacts to EvoMap capsules
+- Consuming external suggestions under explicit approval gates
+- Requiring deterministic fallback and decision provenance
+
+**Key features**:
+- Sidecar architecture and component boundaries
+- Timer-driven publish/fetch/report workflow
+- Policy and approval gates
+- Auditability and degraded-mode requirements
 
 **Use when**:
 - Setting up a `BacktestEngine` with catalog data and fill models
@@ -162,6 +185,7 @@ cp -r skills/nt-implement ~/.claude/skills/
 cp -r skills/nt-review ~/.claude/skills/
 cp -r skills/nt-strategy-builder ~/.claude/skills/
 cp -r skills/nt-dex-adapter ~/.claude/skills/
+cp -r skills/nt-evomap-integration ~/.claude/skills/
 ```
 
 ### Option 2: Symlink for easy updates
@@ -175,13 +199,16 @@ cd nautilus-trader-dev-skill
 ln -s "$(pwd)/skills/nt-architect" ~/.claude/skills/nt-architect
 ln -s "$(pwd)/skills/nt-implement" ~/.claude/skills/nt-implement
 ln -s "$(pwd)/skills/nt-review" ~/.claude/skills/nt-review
+ln -s "$(pwd)/skills/nt-strategy-builder" ~/.claude/skills/nt-strategy-builder
+ln -s "$(pwd)/skills/nt-dex-adapter" ~/.claude/skills/nt-dex-adapter
+ln -s "$(pwd)/skills/nt-evomap-integration" ~/.claude/skills/nt-evomap-integration
 ```
 
 ### Verify installation
 
 ```bash
 ls ~/.claude/skills/
-# Should show: nt-architect  nt-implement  nt-review
+# Should show: nt-architect  nt-implement  nt-review  nt-strategy-builder  nt-dex-adapter  nt-evomap-integration
 ```
 
 ## Usage
@@ -194,6 +221,9 @@ The skills are automatically available in Claude Code. Invoke them by name:
 /nt-architect   # Design component architecture
 /nt-implement   # Implement components from templates
 /nt-review      # Review code before deployment
+/nt-strategy-builder  # Wire backtest/paper/live systems
+/nt-dex-adapter       # Build custom on-chain venue adapters
+/nt-evomap-integration  # Add governed evomap.ai advisory workflow
 ```
 
 ### Typical Workflow
@@ -212,6 +242,11 @@ The skills are automatically available in Claude Code. Invoke them by name:
    - Run quick check (< 5 min) or full review (15-30 min)
    - Address issues by dimension
    - Verify with checklists before deployment
+
+4. **Optional EvoMap Integration Phase**
+   - Keep external intelligence advisory-only and out of hot handlers
+   - Run publish/fetch/report on timers or worker queues
+   - Require approval and provenance before any behavior change
 
 ## Repository Structure
 

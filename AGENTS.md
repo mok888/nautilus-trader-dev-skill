@@ -7,7 +7,7 @@
 
 ## OVERVIEW
 
-Claude Code skills repository for building production-grade trading systems with NautilusTrader. Contains 5 specialized skills covering architecture → implementation → execution → review workflow, plus reference documentation and templates.
+Claude Code skills repository for building production-grade trading systems with NautilusTrader. Contains 6 specialized skills covering architecture → implementation → integration → execution → review workflow, plus reference documentation and templates.
 
 ## STRUCTURE
 
@@ -16,6 +16,7 @@ nautilus-trader-dev-skill/
 ├── skills/                 # 5 specialized skills
 │   ├── nt-architect/      # Architecture decomposition (Actor/Indicator/Strategy)
 │   ├── nt-implement/      # Strategy/Actor/Indicator implementation
+│   ├── nt-evomap-integration/ # EvoMap advisory sidecar integration
 │   ├── nt-strategy-builder/ # BacktestEngine/TradingNode wiring
 │   ├── nt-dex-adapter/    # Custom DEX adapter development
 │   └── nt-review/         # Pre-deployment code review
@@ -45,16 +46,17 @@ nautilus-trader-dev-skill/
 
 ```
 nt-architect → nt-implement → nt-strategy-builder → nt-review
-     ↓              ↓                ↓
-     └──────────────┴────────────────┴──→ nt-dex-adapter (if DEX)
+                    ↓                ↓
+     nt-evomap-integration (if EvoMap)  nt-dex-adapter (if DEX)
 ```
 
 **Sequence:**
 1. **nt-architect** — Decompose system into Actor/Indicator/Strategy components
 2. **nt-implement** — Write individual components with templates
-3. **nt-strategy-builder** — Wire BacktestEngine or TradingNode
-4. **nt-dex-adapter** — (Optional) Build custom DEX adapter
-5. **nt-review** — Review before live deployment
+3. **nt-evomap-integration** — (Optional) Add governed EvoMap advisory workflow
+4. **nt-strategy-builder** — Wire BacktestEngine or TradingNode
+5. **nt-dex-adapter** — (Optional) Build custom DEX adapter
+6. **nt-review** — Review before live deployment
 
 ## CONVENTIONS (PROJECT-SPECIFIC)
 
