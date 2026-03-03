@@ -121,7 +121,7 @@ Deploy (backtest → paper trade → live)
 ## File Structure
 
 ```
-.claude/skills/
+skills/
 ├── nt-architect/
 │   └── SKILL.md
 ├── nt-implement/
@@ -150,4 +150,4 @@ Deploy (backtest → paper trade → live)
 
 ## Installation
 
-Skills created in `.claude/skills/` within this repo, then copied to `~/.claude/skills/` for global availability.
+Skills are developed in the `skills/` directory and can be linked or copied to various AI agent skill directories (e.g., `~/.claude/skills/` for Claude Code or registered via `gemini skills link` for Gemini CLI).

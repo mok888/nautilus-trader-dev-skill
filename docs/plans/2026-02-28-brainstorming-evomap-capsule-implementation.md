@@ -1,6 +1,6 @@
 # Brainstorming EvoMap Capsule Wiring Implementation Plan
 
-> **For Claude:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task.
+> **For AI Agents (Claude, Gemini, Codex):** Use available plan execution skills to implement this plan task-by-task.
 
 **Goal:** Add bi-directional EvoMap Capsule wiring to the brainstorming workflow so sessions can publish design deltas and fetch refinement insights.
 

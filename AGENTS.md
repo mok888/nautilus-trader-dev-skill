@@ -1,19 +1,19 @@
 # PROJECT KNOWLEDGE BASE
 
-**Generated:** 2026-02-28
+**Generated:** 2026-03-03
 **Commit:** 5ab844d
 **Branch:** main
-**Stack:** Codex skills for NautilusTrader development
+**Stack:** AI Agent Skills (Claude Code, Gemini CLI, Codex) for NautilusTrader development
 
 ## OVERVIEW
 
-Codex skills repository for building production-grade trading systems with NautilusTrader. Contains 6 specialized skills covering architecture → implementation → integration → execution → review workflow, plus reference documentation and templates.
+AI agent skills repository for building production-grade trading systems with NautilusTrader. Contains specialized skills covering architecture → implementation → integration → execution → review workflow, plus reference documentation and templates.
 
 ## STRUCTURE
 
 ```
 nautilus-trader-dev-skill/
-├── skills/                 # 5 specialized skills
+├── skills/                 # Specialized skills
 │   ├── nt-architect/      # Architecture decomposition (Actor/Indicator/Strategy)
 │   ├── nt-implement/      # Strategy/Actor/Indicator implementation
 │   ├── nt-evomap-integration/ # EvoMap advisory sidecar integration
@@ -21,8 +21,8 @@ nautilus-trader-dev-skill/
 │   ├── nt-dex-adapter/    # Custom DEX adapter development
 │   └── nt-review/         # Pre-deployment code review
 ├── references/            # NautilusTrader API reference docs
-│   ├── api_reference/     # API documentation (19 files)
-│   ├── concepts/          # Conceptual guides (20 files)
+│   ├── api_reference/     # API documentation
+│   ├── concepts/          # Conceptual guides
 │   ├── developer_guide/   # Development guides
 │   └── integrations/      # Integration examples
 └── docs/                  # Usage guides (uv, serialization, visualization)
@@ -118,6 +118,6 @@ uv run pytest skills/nt-dex-adapter/tests/ -v
 ## NOTES
 
 - This is a **skills repo**, not the nautilus-trader source code
-- Skills are consumed by Codex via SKILL.md files
+- Skills are consumed by AI agents (Claude Code, Gemini CLI, Codex, etc.) via SKILL.md files
 - Templates use `asyncio.run(main())` pattern (no CLI framework)
 - Copyright headers: 2015-2026

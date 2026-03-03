@@ -1,6 +1,6 @@
 # NautilusTrader Skill Refresh Implementation Plan
 
-> **For Claude:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task.
+> **For AI Agents (Claude, Gemini, Codex):** Use available plan execution skills to implement this plan task-by-task.
 
 **Goal:** Update the five NautilusTrader skills so adapter guidance matches the latest official adapter developer guide and repository conventions.
 

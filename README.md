@@ -1,6 +1,6 @@
-# NautilusTrader Development Skills for Claude Code
+# NautilusTrader Development Skills for AI Agents
 
-A collection of Claude Code skills for developing trading systems with [NautilusTrader](https://github.com/nautechsystems/nautilus_trader) - a high-performance algorithmic trading platform written in Rust with Python bindings.
+A collection of AI agent skills (Claude Code, Gemini CLI, Codex) for developing trading systems with [NautilusTrader](https://github.com/nautechsystems/nautilus_trader) - a high-performance algorithmic trading platform written in Rust with Python bindings.
 
 ## Overview
 
@@ -35,218 +35,87 @@ These skills provide a structured workflow for implementing trading strategies, 
 | Build a DEX data/execution adapter | `nt-dex-adapter` → `nt-strategy-builder` (wire it in) → `nt-review` |
 | Review code before deployment | `nt-review` |
 
-### nt-architect
-
-**Purpose**: Translate research outputs (ML models, signals, trading ideas) into NautilusTrader component architecture.
-
-**Use when**:
-- Starting a new trading system implementation
-- Deciding which components to use (Strategy vs Actor vs Indicator)
-- Designing data flow between components
-
-**Key features**:
-- Component decomposition decision tree
-- Data flow patterns (signals vs custom data)
-- State management guidance
-- Lifecycle and warmup planning
-- Optional `evomap.ai` integration boundary (advisory-only, asynchronous, fail-safe)
-
-### nt-implement
-
-**Purpose**: Implement NautilusTrader components using correct patterns and templates.
-
-**Use when**:
-- Writing Strategy, Actor, Indicator, or Adapter code
-- Implementing custom simulation models (FillModel, MarginModel)
-- Creating custom portfolio statistics
-- Writing Rust+PyO3 core implementations
-
-**Key features**:
-- Ready-to-use Python templates for all component types
-- Custom model templates (fill simulation, margin calculation, portfolio statistics)
-- Rust+PyO3 implementation patterns with FFI memory safety
-- Common patterns (model loading, ONNX inference, multi-timeframe data)
-- Optional sidecar pattern for `evomap.ai` publish/fetch/report flows
-
-**Templates included**:
-| Template | Purpose |
-|----------|---------|
-| `strategy.py` | Trading strategy with order management |
-| `actor.py` | Actor for model inference and signal publishing |
-| `indicator.py` | Custom indicator |
-| `custom_data.py` | Custom data types for message bus |
-| `exec_algorithm.py` | Execution algorithm |
-| `fill_model.py` | Custom fill simulation models |
-| `margin_model.py` | Custom margin calculation models |
-| `portfolio_statistic.py` | Custom portfolio statistics |
-| `adapters/*.py` | Exchange, data provider, internal adapters |
-
-### nt-review
-
-**Purpose**: Validate implementations against conventions, trading correctness, performance, and testability.
-
-**Use when**:
-- Before merging to main branch
-- Before deploying to paper/live trading
-- Reviewing Rust/FFI code
-- Validating performance-critical code
-
-**Review dimensions**:
-1. **Nautilus Conventions** - Lifecycle methods, API patterns, naming
-2. **Trading Correctness** - Position sizing, order management, risk checks
-3. **Performance** - No blocking calls, memory management, efficient data handling
-4. **Testability** - Backtest compatibility, deterministic behavior
-5. **Live Trading** - Reconciliation, network resilience, order state management
-6. **Rust/FFI** - Memory safety, style conventions, PyO3 bindings
-7. **Benchmarking** - Criterion/iai setup, profiling, optimization verification
-
-**Optional integration gate**:
-- If `evomap.ai` is enabled, verify advisory-only behavior, fallback mode, approval gates, and full decision provenance.
-
-### nt-strategy-builder *(new)*
-
-**Purpose**: Wire components into running systems — backtest, paper, or live — with any mix of CeFi and DEX venues.
-
-Includes optional `evomap.ai` sidecar wiring guidance for asynchronous publish/fetch/report loops.
-
-### nt-evomap-integration *(new)*
-
-**Purpose**: Implement and govern `evomap.ai` advisory integration for NautilusTrader without coupling external services to execution-critical paths.
-
-**Use when**:
-- Exporting strategy or actor artifacts to EvoMap capsules
-- Consuming external suggestions under explicit approval gates
-- Requiring deterministic fallback and decision provenance
-
-**Key features**:
-- Sidecar architecture and component boundaries
-- Timer-driven publish/fetch/report workflow
-- Policy and approval gates
-- Auditability and degraded-mode requirements
-
-**Use when**:
-- Setting up a `BacktestEngine` with catalog data and fill models
-- Launching a live `TradingNode` with reconciliation and persistence
-- Connecting a custom DEX adapter as a venue
-- Building a multi-venue strategy consuming data from 2+ sources
-
-**Templates included**:
-| Template | Purpose |
-|---|---|
-| `backtest_node.py` | Full backtest with catalog, venue config, fill model |
-| `live_node.py` | Production TradingNode with reconciliation + timeouts |
-| `paper_node.py` | Paper trading: real data, simulated execution |
-| `dex_venue_input.py` | DEX adapter wired as venue (backtest or live) |
-| `multi_venue_strategy.py` | Strategy consuming data from 2+ venues |
-
-**Rules**: `rules/dos_and_donts.md` — 25+ curated DO/DON'T rules with rationale
-
-**Tests**: `tests/` — backtest patterns, live config, DEX venue integration, multi-venue routing
-
 ---
 
-### nt-dex-adapter *(new)*
+## Skill Details
 
-**Purpose**: Build a custom on-chain DEX adapter that fully integrates with NautilusTrader's adapter framework.
+### nt-architect
+**Purpose**: Translate research outputs (ML models, signals, trading ideas) into NautilusTrader component architecture.
+- Component decomposition decision tree
+- Data flow patterns (signals vs custom data)
+- State management and lifecycle planning
 
-**Use when**:
-- Connecting to an AMM (Uniswap V2/V3, Curve) or on-chain CLOB (dYdX v4, Hyperliquid)
-- Building wallet-signed order execution for on-chain venues
-- Synthesising order book data from AMM pool reserves
+### nt-implement
+**Purpose**: Implement NautilusTrader components using correct patterns and templates.
+- Ready-to-use Python templates for all component types
+- Custom model templates (fill, margin, portfolio statistics)
+- Rust+PyO3 implementation patterns
 
-**Templates included**:
-| Template | Purpose |
-|---|---|
-| `dex_config.py` | Config classes (SecretStr private key, sandbox_mode flag) |
-| `dex_instrument_provider.py` | On-chain pool → Nautilus instrument discovery |
-| `dex_data_client.py` | Pool polling → QuoteTick / TradeTick / OrderBookDelta |
-| `dex_exec_client.py` | Wallet-signed tx submission + receipt → order lifecycle events |
-| `dex_factory.py` | ClientFactory that registers adapter with TradingNode |
-| `dex_order_book_builder.py` | AMM constant-product formula → synthetic L2 order book |
+### nt-review
+**Purpose**: Validate implementations against conventions, trading correctness, performance, and testability.
+- Review dimensions: Conventions, Correctness, Performance, Testability, Live Trading, Rust/FFI
 
-**Rules**: `rules/dos_and_donts.md` + `rules/compliance_checklist.md`
+### nt-strategy-builder
+**Purpose**: Wire components into running systems (backtest, paper, live) with CeFi and DEX venues.
+- Templates for `BacktestEngine` and `TradingNode`
+- Multi-venue and DEX wiring guidance
 
-**Tests**: `tests/` — instrument parsing, AMM price levels, structural compliance, backtest integration
+### nt-dex-adapter
+**Purpose**: Build custom on-chain DEX adapters that integrate with NautilusTrader.
+- 7-phase implementation sequence for DEX adapters
+- Instrument provider, data client, and execution client templates
+
+### nt-evomap-integration
+**Purpose**: Implement and govern `evomap.ai` advisory integration.
+- Sidecar architecture and component boundaries
+- Deterministic fallback and decision provenance
 
 ---
 
 ## Installation
 
-### Option 1: Copy to Claude Code skills directory
+### For Gemini CLI
 
-```bash
-# Clone the repository
-git clone https://github.com/YOUR_USERNAME/nautilus-trader-dev-skill.git
-cd nautilus-trader-dev-skill
+1. Clone the repository to your preferred location.
+2. Link the skills to your local Gemini configuration:
+   ```bash
+   gemini skills link ./skills/nt-architect
+   gemini skills link ./skills/nt-implement
+   gemini skills link ./skills/nt-review
+   gemini skills link ./skills/nt-strategy-builder
+   gemini skills link ./skills/nt-dex-adapter
+   gemini skills link ./skills/nt-evomap-integration
+   ```
+3. Verify installation:
+   ```bash
+   gemini skills list
+   ```
 
-# Copy skills to Claude Code directory
-cp -r skills/nt-architect ~/.claude/skills/
-cp -r skills/nt-implement ~/.claude/skills/
-cp -r skills/nt-review ~/.claude/skills/
-cp -r skills/nt-strategy-builder ~/.claude/skills/
-cp -r skills/nt-dex-adapter ~/.claude/skills/
-cp -r skills/nt-evomap-integration ~/.claude/skills/
-```
+### For Claude Code
 
-### Option 2: Symlink for easy updates
+1. Clone the repository.
+2. Link or copy the skills to the Claude Code skills directory:
+   ```bash
+   ln -s "$(pwd)/skills/nt-architect" ~/.claude/skills/nt-architect
+   # ... repeat for other skills
+   ```
+3. The skills will be available as `/nt-architect`, `/nt-implement`, etc.
 
-```bash
-# Clone the repository
-git clone https://github.com/YOUR_USERNAME/nautilus-trader-dev-skill.git
-cd nautilus-trader-dev-skill
+### For Codex
 
-# Create symlinks
-ln -s "$(pwd)/skills/nt-architect" ~/.claude/skills/nt-architect
-ln -s "$(pwd)/skills/nt-implement" ~/.claude/skills/nt-implement
-ln -s "$(pwd)/skills/nt-review" ~/.claude/skills/nt-review
-ln -s "$(pwd)/skills/nt-strategy-builder" ~/.claude/skills/nt-strategy-builder
-ln -s "$(pwd)/skills/nt-dex-adapter" ~/.claude/skills/nt-dex-adapter
-ln -s "$(pwd)/skills/nt-evomap-integration" ~/.claude/skills/nt-evomap-integration
-```
-
-### Verify installation
-
-```bash
-ls ~/.claude/skills/
-# Should show: nt-architect  nt-implement  nt-review  nt-strategy-builder  nt-dex-adapter  nt-evomap-integration
-```
+Place the skill directories in your project's `.agents/skills/` folder or follow your specific Codex configuration for custom skills.
 
 ## Usage
 
-### In Claude Code
+Once installed, you can trigger these skills by mentioning them or their purpose in your prompts.
 
-The skills are automatically available in Claude Code. Invoke them by name:
+### Example Prompts:
+- "Use **nt-architect** to design a strategy for HMM regime detection."
+- "Implement a new Strategy using the **nt-implement** template."
+- "Review my adapter implementation with **nt-review**."
+- "Wire up a backtest for this strategy using **nt-strategy-builder**."
 
-```
-/nt-architect   # Design component architecture
-/nt-implement   # Implement components from templates
-/nt-review      # Review code before deployment
-/nt-strategy-builder  # Wire backtest/paper/live systems
-/nt-dex-adapter       # Build custom on-chain venue adapters
-/nt-evomap-integration  # Add governed evomap.ai advisory workflow
-```
-
-### Typical Workflow
-
-1. **Architecture Phase** (`/nt-architect`)
-   - Describe your trading idea or research output
-   - Get component recommendations (Strategy, Actor, Indicator)
-   - Receive data flow design and lifecycle planning
-
-2. **Implementation Phase** (`/nt-implement`)
-   - Start from provided templates
-   - Follow patterns for your component type
-   - Use common patterns for model loading, risk checks, etc.
-
-3. **Review Phase** (`/nt-review`)
-   - Run quick check (< 5 min) or full review (15-30 min)
-   - Address issues by dimension
-   - Verify with checklists before deployment
-
-4. **Optional EvoMap Integration Phase**
-   - Keep external intelligence advisory-only and out of hot handlers
-   - Run publish/fetch/report on timers or worker queues
-   - Require approval and provenance before any behavior change
+---
 
 ## Repository Structure
 
