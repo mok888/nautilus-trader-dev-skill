@@ -12,8 +12,9 @@ import msgspec
 from nautilus_trader.common.actor import Actor
 from nautilus_trader.config import ActorConfig
 from nautilus_trader.core.data import Data
-from nautilus_trader.model import Bar, BarType
-from nautilus_trader.model import InstrumentId
+from nautilus_trader.model.data import Bar
+from nautilus_trader.model.data import BarType
+from nautilus_trader.model.identifiers import InstrumentId
 
 
 class ModelState(msgspec.Struct):

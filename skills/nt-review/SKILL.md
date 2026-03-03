@@ -59,6 +59,18 @@ EvoMap-specific review severity:
 
 ### 1. Nautilus Conventions
 
+#### Assurance-Driven Engineering (2026 Standard)
+
+Verify that the implementation follows the **Assurance-Driven Engineering** philosophy:
+- **Executable Invariants**: Critical code paths (risk, execution) must be verified by unit tests, property tests, or fuzzers.
+- **Parity**: Strategy code must be identical and deterministic across backtesting, paper, and live environments.
+- **Soundness**: Rust code must be free of memory safety bugs (strictly follow `![deny(unsafe_op_in_unsafe_fn)]`).
+
+#### Precision and Serialization
+
+- **128-bit High-Precision**: Verify that `Price`, `Quantity`, and `Money` handle 128-bit values correctly, especially for crypto or high-volume assets. Avoid raw `float` or `f64` for these types.
+- **Cap'n Proto**: If high-performance data interchange is required, verify the use of **Cap'n Proto** (via the `capnp` feature flag) for zero-copy serialization between Rust and Python.
+
 #### Lifecycle Methods
 
 Check that lifecycle methods are correctly implemented:
@@ -530,6 +542,9 @@ def on_order_filled(self, event: OrderFilled) -> None:
 - [ ] All order lifecycle events handled
 - [ ] Reconnection logic in adapters
 - [ ] EvoMap (if enabled) has explicit fallback, approval gate, and provenance logging
+- [ ] **v1.223.0**: `trade_execution` default is now `True`; if using bar-only execution set `trade_execution=False` explicitly in `BacktestVenueConfig`
+- [ ] **v1.223.0**: `Quantity - Quantity` returns `Quantity` (not `Decimal`); `ValueError` raised if result < 0 — update any code expecting `Decimal`
+- [ ] **v1.223.0**: dYdX v3 adapter removed; ensure imports use `nautilus_trader.adapters.dydx` with `Dydx*` class prefix
 
 ### Risk Controls
 
@@ -619,6 +634,7 @@ tokio::spawn(async move { ... });
 - Using `HashMap` instead of `AHashMap` for non-security-critical code
 - Missing module-level documentation
 - Missing `#![deny(unsafe_op_in_unsafe_fn)]` crate-level lint
+- Rust doc comments in imperative mood (e.g., "Return the client") — use **indicative mood** (e.g., "Returns the client")
 
 ### Unsafe Rust Policy Review
 
@@ -702,6 +718,8 @@ let cache: Arc<DashMap<K, V>> = Arc::new(DashMap::new());
 **Red flags:**
 - Using `AHashMap` for network clients where security outweighs performance
 - Wrapping `AHashMap` in `Arc` for concurrent writes without proper synchronization
+
+> **v1.223.0**: `AddAssign`/`SubAssign`/`MulAssign` (`+=`, `-=`, `*=`) removed from `Price`, `Quantity`, and `Money` in Rust. Use `x = x + y` instead of `x += y`.
 
 ### Box-style Banner Comments
 

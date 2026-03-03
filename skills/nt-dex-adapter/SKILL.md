@@ -40,7 +40,7 @@ Treat these as non-negotiable for custom adapters:
 |---|---|
 | AMM (Uniswap V2/V3, Curve) | No order book — synthesise `QuoteTick` from pool reserves |
 | On-chain CLOB (dYdX v4, Hyperliquid) | Use existing dYdX/Hyperliquid adapters as starting points |
-| Perp DEX (GMX, Synthetix) | Use `CryptoPermanentContract` instrument type |
+| Perp DEX (GMX, Synthetix) | Use `PerpetualContract` instrument type (v1.223.0+, asset-class agnostic); `CryptoPermanentContract` is still valid for crypto-specific perps |
 | Cross-chain DEX | Implement per-chain data client; share execution client logic |
 
 ## DEX vs CeFi Key Differences
@@ -68,7 +68,7 @@ This maps directly to the canonical adapter implementation pattern. Complete eac
 
 ### Phase 2: Instrument Discovery
 - `InstrumentProvider.load_all_async()` → fetch pool/market addresses from chain
-- Parse pool metadata → `CurrencyPair` or `CryptoPermanentContract`
+- Parse pool metadata → `CurrencyPair`, `CryptoPermanentContract`, or `PerpetualContract` (preferred in v1.223.0+ for asset-class-agnostic perps)
 - Map on-chain tokens to Nautilus `Currency` objects
 - Normalise instrument IDs to `{POOL_SYMBOL}.{VENUE}` format
 

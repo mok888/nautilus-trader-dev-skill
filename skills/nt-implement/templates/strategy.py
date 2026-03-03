@@ -9,16 +9,16 @@ from decimal import Decimal
 
 from nautilus_trader.config import StrategyConfig
 from nautilus_trader.core.data import Data
-from nautilus_trader.model import Bar, BarType
-from nautilus_trader.model import InstrumentId
-from nautilus_trader.model import OrderSide
-from nautilus_trader.model import Quantity
+from nautilus_trader.model.data import Bar
+from nautilus_trader.model.data import BarType
+from nautilus_trader.model.identifiers import InstrumentId
+from nautilus_trader.model.enums import OrderSide
+from nautilus_trader.model.objects import Quantity
 from nautilus_trader.model.events import OrderFilled
 from nautilus_trader.model.events import PositionChanged
 from nautilus_trader.model.events import PositionClosed
 from nautilus_trader.model.events import PositionOpened
 from nautilus_trader.model.instruments import Instrument
-from nautilus_trader.model.orders import MarketOrder
 from nautilus_trader.trading.strategy import Strategy
 
 
@@ -252,7 +252,7 @@ class MyStrategy(Strategy):
         if self.instrument is None:
             return
 
-        order: MarketOrder = self.order_factory.market(
+        order = self.order_factory.market(
             instrument_id=self.config.instrument_id,
             order_side=OrderSide.BUY,
             quantity=self.instrument.make_qty(self.config.trade_size),
@@ -264,7 +264,7 @@ class MyStrategy(Strategy):
         if self.instrument is None:
             return
 
-        order: MarketOrder = self.order_factory.market(
+        order = self.order_factory.market(
             instrument_id=self.config.instrument_id,
             order_side=OrderSide.SELL,
             quantity=self.instrument.make_qty(self.config.trade_size),

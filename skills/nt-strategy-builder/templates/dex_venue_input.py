@@ -69,7 +69,7 @@ def run_dex_backtest(catalog_path: str = "/path/to/catalog") -> None:
     # DEX-realistic fill model
     dex_fill_model = FillModel(
         prob_fill_on_limit=0.25,  # DEX limit orders rarely execute at exact price
-        prob_fill_on_stop=1.0,
+        # prob_fill_on_stop deprecated since v1.223.0 — use prob_slippage
         prob_slippage=0.70,       # High AMM slippage
         random_seed=42,
     )

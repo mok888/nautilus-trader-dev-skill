@@ -47,7 +47,9 @@ Are you using live market data?
 
 NautilusTrader ships adapters for Binance, Bybit, OKX, Coinbase IntX, dYdX, IB, Databento, Tardis, and more.
 
-Use venue/integration availability from the current NautilusTrader release and prefer dYdX v4 guidance for on-chain CLOB workflows.
+> **v1.223.0**: dYdX v3 (legacy) adapter removed. Use `nautilus_trader.adapters.dydx` (module renamed from `dydx_v4`). Class prefix is now `Dydx` (e.g., `DydxDataClientConfig`, `DydxLiveDataClientFactory`). The dydx optional install extra is no longer needed.
+
+> **v1.223.0 Binance**: `listen_key_ping_max_failures` removed from `BinanceExecClientConfig`. Binance now authenticates via WebSocket API (Ed25519/HMAC auto-detected from `api_secret` format). Credentials from `BINANCE_API_KEY`/`BINANCE_API_SECRET` env vars.
 
 ```python
 from nautilus_trader.adapters.binance.factories import BinanceLiveDataClientFactory
@@ -165,13 +167,14 @@ If any invariant fails, block deployment and return to `nt-dex-adapter` + `nt-re
 
 ### FillModel — Backtest Realism
 
+> **v1.223.0**: `prob_fill_on_stop` is deprecated. Use `prob_slippage` for market/stop order slippage probability.
+
 ```python
 from nautilus_trader.backtest.models import FillModel
 
 # DEX-realistic: high slippage, lower limit fill probability
 dex_fill_model = FillModel(
     prob_fill_on_limit=0.3,   # DEX: limit orders rarely at exact price
-    prob_fill_on_stop=1.0,    # Stop → market on DEX
     prob_slippage=0.7,        # DEX: high slippage probability
     random_seed=42,
 )
@@ -179,7 +182,6 @@ dex_fill_model = FillModel(
 # CeFi realistic
 cefi_fill_model = FillModel(
     prob_fill_on_limit=0.5,
-    prob_fill_on_stop=1.0,
     prob_slippage=0.2,
     random_seed=42,
 )
@@ -235,6 +237,27 @@ See `rules/dos_and_donts.md` for the full curated ruleset with rationale.
 - ❌ Never auto-apply EvoMap suggestions directly to live execution behavior
 - ❌ Never put ML inference inside Strategy (use Actor)
 - ❌ Never use `datetime.utcnow()` — use `self.clock.utc_now()`
+- ❌ **v1.223.0**: Never use `from nautilus_trader.adapters.dydx_v4` — module renamed to `dydx`
+- ❌ **v1.223.0**: Never assume `Quantity - Quantity` returns `Decimal` — it now returns `Quantity`; negative result raises `ValueError`
+- ❌ **v1.223.0**: Never use `prob_fill_on_stop` in FillModel — deprecated; use `prob_slippage`
+
+## New in v1.223.0 (2026-02-21)
+
+Key additions that affect strategy and execution wiring:
+
+| Feature | Description |
+|---|---|
+| `strategy.market_exit(instrument_id)` | New convenience method for full market exit with configurable `market_exit_time_in_force` and `market_exit_reduce_only` options |
+| `StrategyConfig.manage_stop` | Automatically flattens position with market order on strategy stop |
+| `PerpetualContract` instrument | New instrument type for asset-class-agnostic perpetual swaps (use instead of `CryptoPerpetual` where applicable) |
+| `BacktestDataConfig.optimize_file_loading` | New parameter for optimized Parquet file loading in large backtests |
+| `trade_execution` default → `True` | **Breaking**: previously defaulted to `False`; set `trade_execution=False` explicitly for bar-only matching |
+| `oto_trigger_mode` venue config | Control OTO child order activation: `PARTIAL` (default) or `FULL` |
+| `use_market_order_acks` venue config | Generate `OrderAccepted` events for market orders before filling (Binance-like behavior) |
+| `request_funding_rates()` + `FundingRateUpdate` | New data type and request method for funding rate data |
+| Nasdaq ITCH 5.0 parser | Built-in support for Nasdaq ITCH 5.0 market data format |
+| Sandbox execution adapter (Rust) | Rust-native sandbox adapter for development/testing |
+
 
 ## Testing
 

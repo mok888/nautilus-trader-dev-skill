@@ -117,17 +117,25 @@ class RegimeActor(Actor):
 
 ## Templates
 
+> **New in v1.223.0 (2026-02-21)** — Key API additions to use in new implementations:
+> - **`strategy.market_exit(instrument_id)`** — Convenience method to fully close a position with a market order; supports `market_exit_time_in_force` and `market_exit_reduce_only` config options.
+> - **`StrategyConfig.manage_stop = True`** — Automatically calls `market_exit()` when the strategy is stopped. Eliminates manual `on_stop()` close logic.
+> - **`PerpetualContract`** — New instrument type for asset-class-agnostic perpetual swaps. Prefer over `CryptoPerpetual` for new implementations.
+> - **`request_funding_rates()` / `FundingRateUpdate`** — New data request method and data type for funding rate streams.
+> - **`BacktestDataConfig.optimize_file_loading`** — Set `True` for faster Parquet loading in large backtests.
+> - **`trade_execution` default changed to `True`** — If you want bar-only matching, explicitly set `trade_execution=False` in `BacktestVenueConfig`.
+
 ### Quick Reference: Which Template?
 
 | Need | Template | Key Feature |
 |------|----------|-------------|
-| Trading logic, orders | `strategy.py` | `submit_order()`, position management |
+| Trading logic, orders | `strategy.py` | `submit_order()`, `market_exit()`, position management |
 | Model inference, signals | `actor.py` | `publish_signal()`, `publish_data()` |
 | Stateless calculations | `indicator.py` | `handle_bar()`, pure computation |
 | Structured data between components | `custom_data.py` | `@customdataclass`, serialization |
 | Order execution logic | `exec_algorithm.py` | Child order spawning |
 | Exchange/data connectivity | `adapters/` | LiveDataClient, LiveExecutionClient |
-| Custom fill simulation | `fill_model.py` | `prob_fill_on_limit`, queue position |
+| Custom fill simulation | `fill_model.py` | `prob_fill_on_limit`, `prob_slippage` (queue position) |
 | Custom margin calculation | `margin_model.py` | `calculate_margin_init/maint` |
 | Custom portfolio statistics | `portfolio_statistic.py` | `calculate_from_orders/positions` |
 
@@ -399,7 +407,7 @@ class VolatilityAdjustedFillModel(FillModel):
     ) -> None:
         super().__init__(
             prob_fill_on_limit=base_prob_fill_on_limit,
-            prob_fill_on_stop=1.0,  # Deprecated, use prob_slippage
+            # prob_fill_on_stop is deprecated in v1.223.0; use prob_slippage
             prob_slippage=base_prob_slippage,
             random_seed=random_seed,
         )

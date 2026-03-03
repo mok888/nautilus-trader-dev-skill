@@ -39,7 +39,7 @@ catalog = ParquetDataCatalog(CATALOG_PATH)
 
 fill_model = FillModel(
     prob_fill_on_limit=0.5,   # Probability a limit order fills (0→1)
-    prob_fill_on_stop=1.0,    # Probability a stop order fills (usually 1.0)
+    # prob_fill_on_stop is deprecated since v1.223.0 — use prob_slippage instead
     prob_slippage=0.2,        # Probability of one tick slippage on market orders
     random_seed=42,           # Reproducible results
 )
@@ -47,7 +47,6 @@ fill_model = FillModel(
 # DEX-realistic variant (uncomment for DEX venues):
 # dex_fill_model = FillModel(
 #     prob_fill_on_limit=0.25,
-#     prob_fill_on_stop=1.0,
 #     prob_slippage=0.70,
 #     random_seed=42,
 # )

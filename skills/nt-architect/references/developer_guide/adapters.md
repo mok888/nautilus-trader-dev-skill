@@ -582,11 +582,10 @@ class TemplateLiveMarketDataClient(LiveMarketDataClient):
     async def _unsubscribe_order_book_deltas(self, command: UnsubscribeOrderBook) -> None:
         raise NotImplementedError("implement `_unsubscribe_order_book_deltas` in your adapter subclass")
 
-    async def _subscribe_order_book_snapshots(self, command: SubscribeOrderBook) -> None:
-        raise NotImplementedError("implement `_subscribe_order_book_snapshots` in your adapter subclass")
-
-    async def _unsubscribe_order_book_snapshots(self, command: UnsubscribeOrderBook) -> None:
-        raise NotImplementedError("implement `_unsubscribe_order_book_snapshots` in your adapter subclass")
+    # REMOVED in v1.223.0: _subscribe_order_book_snapshots and _unsubscribe_order_book_snapshots
+    # Override _subscribe_order_book_depth / _unsubscribe_order_book_depth instead for OrderBookDepth10.
+    # async def _subscribe_order_book_snapshots(self, command: SubscribeOrderBook) -> None: ...
+    # async def _unsubscribe_order_book_snapshots(self, command: UnsubscribeOrderBook) -> None: ...
 
     async def _subscribe_quote_ticks(self, command: SubscribeQuoteTicks) -> None:
         raise NotImplementedError("implement `_subscribe_quote_ticks` in your adapter subclass")
@@ -668,8 +667,8 @@ class TemplateLiveMarketDataClient(LiveMarketDataClient):
 - `_unsubscribe_instrument`: Unsubscribes from market data for a single instrument.
 - `_subscribe_order_book_deltas`: Subscribes to order book delta updates.
 - `_unsubscribe_order_book_deltas`: Unsubscribes from order book delta updates.
-- `_subscribe_order_book_snapshots`: Subscribes to order book snapshot updates.
-- `_unsubscribe_order_book_snapshots`: Unsubscribes from order book snapshot updates.
+- ~~`_subscribe_order_book_snapshots`~~: **Removed in v1.223.0** — override `_subscribe_order_book_depth` instead for `OrderBookDepth10` subscriptions.
+- ~~`_unsubscribe_order_book_snapshots`~~: **Removed in v1.223.0** — override `_unsubscribe_order_book_depth` instead.
 - `_subscribe_quote_ticks`: Subscribes to top-of-book quote updates.
 - `_unsubscribe_quote_ticks`: Unsubscribes from quote tick updates.
 - `_subscribe_trade_ticks`: Subscribes to trade tick updates.

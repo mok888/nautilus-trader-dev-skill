@@ -4,6 +4,7 @@
 **Commit:** 5ab844d
 **Branch:** main
 **Stack:** AI Agent Skills (Claude Code, Gemini CLI, Codex) for NautilusTrader development
+**NautilusTrader Version:** v1.223.0 Beta (released 2026-02-21)
 
 ## OVERVIEW
 
@@ -93,7 +94,13 @@ nt-architect → nt-implement → nt-strategy-builder → nt-review
 | Unbounded lists | Memory leak |
 | `reconciliation=False` live | State drift |
 | `Arc<PyObject>` | Memory leak |
-| `prob_fill_on_stop` in FillModel | Deprecated API drift |
+| `prob_fill_on_stop` in FillModel | Deprecated — use `prob_slippage` |
+| `from nautilus_trader.adapters.dydx_v4` | **Removed in v1.223.0** — use `nautilus_trader.adapters.dydx` |
+| `listen_key_ping_max_failures` in Binance config | **Removed in v1.223.0** — Binance now uses WebSocket API auth |
+| `subscribe_order_book_snapshots()` | **Removed in v1.223.0** — use `_subscribe_order_book_depth` |
+| `Quantity - Quantity` expecting `Decimal` result | **v1.223.0**: returns `Quantity`; negative result raises `ValueError` |
+| `trade_execution=True` in bar-only backtests | **v1.223.0**: default changed to `True`; set `False` explicitly for bar-only |
+| `x += y` for `Price`/`Quantity`/`Money` in Rust | **v1.223.0**: `AddAssign`/`SubAssign` removed — use `x = x + y` |
 
 ## COMMANDS
 

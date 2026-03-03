@@ -395,7 +395,7 @@ For more details on rate limiting, see the official documentation: <https://bina
 | `retry_delay_max_ms`                 | `None`  | Maximum delay (milliseconds) between retry attempts. |
 | `futures_leverages`                  | `None`  | Mapping of `BinanceSymbol` to initial leverage for futures accounts. |
 | `futures_margin_types`               | `None`  | Mapping of `BinanceSymbol` to futures margin type (isolated/cross). |
-| `listen_key_ping_max_failures`       | `3`     | Consecutive listen key ping failures allowed before recovery triggers. |
+| `listen_key_ping_max_failures`       | ~~`3`~~ | **Removed in v1.223.0.** Binance execution clients now authenticate via WebSocket API (HMAC/Ed25519 auto-detected). This config option no longer exists. |
 | `log_rejected_due_post_only_as_warning` | `True` | Log post-only rejections as warnings when `True`; otherwise as errors. |
 
 The most common use case is to configure a live `TradingNode` to include Binance
