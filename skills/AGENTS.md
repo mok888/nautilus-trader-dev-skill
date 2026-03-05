@@ -26,7 +26,7 @@ nt-architect → nt-implement → nt-strategy-builder → nt-review
 ### All Skills Share
 - `SKILL.md` — Skill definition (description, when to use, workflow)
 - `templates/` — Executable Python templates
-- `references/` — API reference docs (symlinked to root)
+- `references/` — API reference docs (symlinked from root `references/`)
 - `rules/` — DO/DON'T rulesets (some skills)
 
 ### Template Pattern
