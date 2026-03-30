@@ -1,7 +1,7 @@
 # PROJECT KNOWLEDGE BASE
 
-**Generated:** 2026-03-03
-**Commit:** 5ab844d
+**Generated:** 2026-03-30
+**Commit:** 618653c
 **Branch:** main
 **Stack:** AI Agent Skills (Claude Code, Gemini CLI, Codex) for NautilusTrader development
 **NautilusTrader Version:** v1.223.0 Beta (released 2026-02-21)
@@ -73,6 +73,13 @@ nt-architect → nt-implement → nt-strategy-builder → nt-review
 - `anyhow::bail!` for errors
 - `#![deny(unsafe_op_in_unsafe_fn)]`
 - No box-style banner comments
+
+### Lifecycle Rules (all components)
+- `super().__init__(config)` must be first call in `__init__`
+- `on_start`: load instrument from cache (null check), load models, `request_bars` then `subscribe_bars`
+- `on_stop`: cancel orders, unsubscribe, cleanup state
+- `on_reset`: clear buffers and state for reuse
+- Never use `clock`/`logger`/`cache` in `__init__` (not yet available)
 
 ### Tooling
 - `uv` for dependency management and test execution (not pip)
