@@ -48,6 +48,18 @@ Validate each component before proceeding to the next.
 | `BacktestDataConfig.optimize_file_loading` | Faster Parquet loading for large backtests |
 | `trade_execution` default `True` | Set `False` explicitly for bar-only matching |
 
+## v1.224.0 CHANGES (2026-03-03)
+
+| Change | Impact |
+|--------|--------|
+| `InstrumentProvider` defaults | Only `load_all_async` required; `load_ids_async`/`load_async` have defaults |
+| `fill_limit_at_touch` → `fill_limit_inside_spread` | Renamed; `BestPriceFillModel` fills inside spread by default |
+| Coinbase International adapter removed | `COINBASE_INTX` deleted; use different venue |
+| WS `connect()` needs `loop_=self._loop` | All adapter WebSocket connections |
+| `OrderBook.get_target_px_for_quantity()` | New method for book impact analysis |
+| Binance Ed25519 Spot/Margin | Now raises `ValueError`; Futures soft-deprecated |
+| Hyperliquid `builder_fee_refresh_mins` | Config removed |
+
 ## KEY IMPLEMENTATION PATTERNS
 
 ### Model Loading

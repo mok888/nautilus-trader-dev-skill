@@ -545,6 +545,11 @@ def on_order_filled(self, event: OrderFilled) -> None:
 - [ ] **v1.223.0**: `trade_execution` default is now `True`; if using bar-only execution set `trade_execution=False` explicitly in `BacktestVenueConfig`
 - [ ] **v1.223.0**: `Quantity - Quantity` returns `Quantity` (not `Decimal`); `ValueError` raised if result < 0 — update any code expecting `Decimal`
 - [ ] **v1.223.0**: dYdX v3 adapter removed; ensure imports use `nautilus_trader.adapters.dydx` with `Dydx*` class prefix
+- [ ] **v1.224.0**: `fill_limit_at_touch` renamed to `fill_limit_inside_spread`; update FillModel references
+- [ ] **v1.224.0**: Coinbase International adapter (`COINBASE_INTX`) removed; purge all references
+- [ ] **v1.224.0**: `InstrumentProvider.load_ids_async`/`load_async` now have defaults; adapter only needs `load_all_async`
+- [ ] **v1.224.0**: Binance Ed25519 env vars for Spot/Margin now raise `ValueError` (hard error)
+- [ ] **v1.224.0**: Hyperliquid `builder_fee_refresh_mins` config removed
 
 ### Risk Controls
 
@@ -589,6 +594,77 @@ fee_rate = self.instrument.maker_fee_rate if is_maker else self.instrument.taker
 - Hardcoding exchange IDs or parameters
 - Not using `instrument.maker_fee_rate` / `taker_fee_rate`
 - Assuming universal order types or features
+
+### Order Emulation and Triggers (v1.223.0+)
+
+10 emulation trigger types available:
+
+| Trigger | Description |
+|---------|-------------|
+| `NO_TRIGGER` | No emulation |
+| `DEFAULT` | Venue default |
+| `BID_ASK` | Bid/ask price based |
+| `LAST_PRICE` | Last trade price |
+| `DOUBLE_LAST` | Double last trade price |
+| `DOUBLE_BID_ASK` | Double bid/ask |
+| `LAST_OR_BID_ASK` | Last or bid/ask |
+| `MID_POINT` | Mid-price |
+| `MARK_PRICE` | Mark price |
+| `INDEX_PRICE` | Index price |
+
+**Venue-specific trigger rules:**
+
+| Venue | Default Trigger |
+|-------|----------------|
+| Binance | `LAST_PRICE` (spot), `MARK_PRICE` (futures) |
+| Bybit | `LAST_PRICE` |
+| Kraken | `BID_ASK` |
+| OKX | `MARK_PRICE` |
+| IB | `DOUBLE_LAST` |
+| dYdX | `INDEX_PRICE` |
+| Polymarket | `MID_POINT` |
+| Betfair | `DOUBLE_BID_ASK` |
+
+**Review checks:**
+- [ ] Emulation trigger type matches venue expectations
+- [ ] `cache.orders_emulated()` / `cache.is_order_emulated()` used for emulation queries
+- [ ] OTO/OCO/OUO contingency orders validated with correct `oto_trigger_mode` (`PARTIAL` or `FULL`)
+
+### Order Emulation Triggers (v1.223.0+)
+
+10 emulation trigger types available:
+
+| Trigger | Description |
+|---------|-------------|
+| `NO_TRIGGER` | No emulation |
+| `DEFAULT` | Venue default |
+| `BID_ASK` | Bid/ask price based |
+| `LAST_PRICE` | Last trade price |
+| `DOUBLE_LAST` | Double last trade price |
+| `DOUBLE_BID_ASK` | Double bid/ask |
+| `LAST_OR_BID_ASK` | Last or bid/ask |
+| `MID_POINT` | Mid-price |
+| `MARK_PRICE` | Mark price |
+| `INDEX_PRICE` | Index price |
+
+**Venue-specific trigger rules:**
+
+| Venue | Default Trigger |
+|-------|----------------|
+| Binance | `LAST_PRICE` (spot), `MARK_PRICE` (futures) |
+| Bybit | `LAST_PRICE` |
+| Kraken | `BID_ASK` |
+| OKX | `MARK_PRICE` |
+| IB | `DOUBLE_LAST` |
+| dYdX | `INDEX_PRICE` |
+| Polymarket | `MID_POINT` |
+| Betfair | `DOUBLE_BID_ASK` |
+
+**Review checks:**
+- [ ] Emulation trigger type matches venue expectations
+- [ ] `cache.orders_emulated()` / `cache.is_order_emulated()` used for emulation queries
+- [ ] `oto_trigger_mode` set correctly: `FULL` or `PARTIAL` (default)
+- [ ] Bracket order patterns use correct OTO/OCO/OUO contingency types
 
 Check adherence to NautilusTrader Rust style:
 

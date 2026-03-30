@@ -36,6 +36,7 @@ from nautilus_trader.model.orders import Order
 # Configuration
 # =============================================================================
 
+
 class MyExchangeInstrumentProviderConfig(InstrumentProviderConfig):
     """Configuration for the instrument provider."""
 
@@ -67,11 +68,16 @@ class MyExchangeExecClientConfig(LiveExecClientConfig):
 # Instrument Provider
 # =============================================================================
 
+
 class MyExchangeInstrumentProvider:
     """
     Instrument provider for MyExchange.
 
     Loads and caches instrument definitions from the exchange.
+
+    Note (v1.224.0): Only ``load_all_async`` is required. The base class
+    provides default implementations for ``load_ids_async`` and
+    ``load_async`` that delegate to ``load_all_async``.
     """
 
     def __init__(self, config: MyExchangeInstrumentProviderConfig) -> None:
@@ -92,20 +98,6 @@ class MyExchangeInstrumentProvider:
         # Parse and store in self._instruments
         pass
 
-    async def load_ids_async(
-        self,
-        instrument_ids: list[InstrumentId],
-    ) -> None:
-        """
-        Load specific instruments by ID.
-
-        Parameters
-        ----------
-        instrument_ids : list[InstrumentId]
-            The instrument IDs to load.
-        """
-        pass
-
     def get_all(self) -> dict[InstrumentId, Instrument]:
         """Return all loaded instruments."""
         return self._instruments.copy()
@@ -118,6 +110,7 @@ class MyExchangeInstrumentProvider:
 # =============================================================================
 # Data Client
 # =============================================================================
+
 
 class MyExchangeDataClient(LiveMarketDataClient):
     """
@@ -223,6 +216,7 @@ class MyExchangeDataClient(LiveMarketDataClient):
 # =============================================================================
 # Execution Client
 # =============================================================================
+
 
 class MyExchangeExecutionClient(LiveExecutionClient):
     """
@@ -336,7 +330,9 @@ class MyExchangeExecutionClient(LiveExecutionClient):
         """
         pass
 
-    async def _cancel_all_orders(self, instrument_id: InstrumentId | None = None) -> None:
+    async def _cancel_all_orders(
+        self, instrument_id: InstrumentId | None = None
+    ) -> None:
         """Cancel all orders, optionally filtered by instrument."""
         pass
 

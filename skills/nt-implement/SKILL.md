@@ -117,13 +117,84 @@ class RegimeActor(Actor):
 
 ## Templates
 
+> **New in v1.224.0 (2026-03-03)** — Breaking changes and new features:
+> - **InstrumentProvider simplification**: `load_ids_async()` and `load_async()` now have default implementations that Only `load_all_async()` is required in adapter subclasses.
+> - **`fill_limit_inside_spread`**: Renamed from `fill_limit_at_touch`. `BestPriceFillModel` now fills inside bid-ask spread by default.
+> - **Coinbase International adapter removed**: `COINBASE_INTX` package deleted (RFC #3555). Use a different venue.
+> - **`OrderBook.get_target_px_for_quantity()`**: New method for book impact analysis.
+> - **BitMEX dead man's switch**: New `deadmans_switch_timeout_secs` config field.
+> - **OKX trailing stop + algo amend support**.
+> - **Hyperliquid order modify support** (`builder_fee_refresh_mins` config removed).
+> - **Betfair batch operations**: `SubmitOrderList` and `BatchCancelOrders` now supported.
+> - **Binance Ed25519**: Spot/Margin raises `ValueError` for Ed25519 env vars. Futures soft-deprecated.
+> - **WS `connect()` now needs `loop_=self._loop` parameter in adapter code.
+
+> - **Rust `InstrumentProvider` trait**: New crate-level trait formalizes adapter patterns at `crates/common/src/providers.rs`.
+
 > **New in v1.223.0 (2026-02-21)** — Key API additions to use in new implementations:
-> - **`strategy.market_exit(instrument_id)`** — Convenience method to fully close a position with a market order; supports `market_exit_time_in_force` and `market_exit_reduce_only` config options.
-> - **`StrategyConfig.manage_stop = True`** — Automatically calls `market_exit()` when the strategy is stopped. Eliminates manual `on_stop()` close logic.
+> - **`strategy.market_exit(instrument_id)`** — Convenience method to fully close a position with a market order. Hooks: `on_market_exit()`, `post_market_exit()`. Check: `is_exiting()`. Config: `market_exit_interval_ms` (100), `market_exit_max_attempts` (100), `market_exit_time_in_force`, `market_exit_reduce_only` (True).
+> - **`StrategyConfig.manage_stop = True`** — Automatically calls `market_exit()` when the strategy is stopped.
 > - **`PerpetualContract`** — New instrument type for asset-class-agnostic perpetual swaps. Prefer over `CryptoPerpetual` for new implementations.
 > - **`request_funding_rates()` / `FundingRateUpdate`** — New data request method and data type for funding rate streams.
 > - **`BacktestDataConfig.optimize_file_loading`** — Set `True` for faster Parquet loading in large backtests.
 > - **`trade_execution` default changed to `True`** — If you want bar-only matching, explicitly set `trade_execution=False` in `BacktestVenueConfig`.
+
+**Strategy Handler Reference (v1.223.0+):**
+
+| Handler | Trigger |
+|---------|----------|
+| `on_start` | Strategy start |
+| `on_stop` | Strategy stop |
+| `on_resume` | Resume from degraded state |
+| `on_reset` | Reset for reuse |
+| `on_dispose` | Cleanup before removal |
+| `on_degrade` | Enter degraded mode |
+| `on_fault` | Unrecoverable error |
+| `on_save` | Serialize state |
+| `on_load` | Deserialize state |
+| `on_bar` | Bar data received |
+| `on_quote_tick` | Quote tick received |
+| `on_trade_tick` | Trade tick received |
+| `on_order_book_deltas` | Order book delta received |
+| `on_order_book` | Order book snapshot received |
+| `on_instrument` | Instrument update received |
+| `on_instrument_status` | Instrument status change |
+| `on_instrument_close` | Instrument close received |
+| `on_historical_data` | Historical data response |
+| `on_data` | Custom data received |
+| `on_signal` | Signal received |
+| `on_event` | Catch-all event handler |
+| `on_order_initialized` | Order created |
+| `on_order_denied` | Order denied by risk engine |
+| `on_order_emulated` | Order entered emulator |
+| `on_order_released` | Order released from emulator |
+| `on_order_submitted` | Order submitted to venue |
+| `on_order_rejected` | Order rejected by venue |
+| `on_order_accepted` | Order accepted by venue |
+| `on_order_canceled` | Order canceled |
+| `on_order_expired` | Order expired |
+| `on_order_triggered` | Order triggered |
+| `on_order_updated` | Order modified |
+| `on_order_filled` | Order (partially) filled |
+| `on_position_opened` | Position opened |
+| `on_position_changed` | Position changed (partial fill) |
+| `on_position_closed` | Position closed |
+| `on_market_exit` | Market exit in progress hook |
+| `post_market_exit` | After market exit completes |
+
+During market exit, non-reduce-only orders are auto-denied; order lists with any non-reduce-only order denied entirely.
+>
+> **New in v1.224.0 (2026-03-03)** — Breaking changes and new features:
+> - **InstrumentProvider simplification**: `load_ids_async()` and `load_async()` now have default implementations that delegate to `load_all_async()`. Only `load_all_async()` is required in adapter subclasses.
+> - **`fill_limit_inside_spread`**: Renamed from `fill_limit_at_touch`. `BestPriceFillModel` now fills inside bid-ask spread by default.
+> - **Coinbase International adapter removed**: `COINBASE_INTX` package deleted (RFC #3555). Use a different venue.
+> - **WS `connect()` requires `loop_=` param**: All custom adapter WebSocket connect calls now need `loop_=self._loop`.
+> - **`OrderBook.get_target_px_for_quantity()`**: New method for book impact analysis.
+> - **BitMEX dead man's switch**: New `deadmans_switch_timeout_secs` config field.
+> - **OKX**: Trailing stop market + algo amend support.
+> - **Hyperliquid**: Order modify support; `builder_fee_refresh_mins` config removed.
+> - **Betfair**: `SubmitOrderList` and `BatchCancelOrders` batch operations.
+> - **Binance Ed25519**: Spot/Margin `BINANCE_ED25519_*` env vars now raise `ValueError`.
 
 ### Quick Reference: Which Template?
 
@@ -1011,7 +1082,7 @@ def calculate_signal(self, bar: Bar) -> float:
 - Config classes: `{Component}Config` (e.g., `TrendStrategyConfig`)
 - Strategy IDs: `{StrategyClass}-{order_id_tag}` (e.g., `TrendStrategy-001`)
 - Instrument IDs: `{symbol}.{venue}` (e.g., `BTCUSDT-PERP.BINANCE`)
-- Bar types: `{instrument_id}-{step}-{aggregation}-{price_type}-{source}`
+- Bar types: `{instrument_id}-{step}-{aggregation}[{price_type}]-{source}` (price_type in square brackets)
 
 ### Formatting
 

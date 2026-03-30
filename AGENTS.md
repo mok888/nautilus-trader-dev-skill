@@ -4,7 +4,7 @@
 **Commit:** 618653c
 **Branch:** main
 **Stack:** AI Agent Skills (Claude Code, Gemini CLI, Codex) for NautilusTrader development
-**NautilusTrader Version:** v1.223.0 Beta (released 2026-02-21)
+**NautilusTrader Version:** v1.224.0 Beta (released 2026-03-03)
 
 ## OVERVIEW
 
@@ -108,6 +108,10 @@ nt-architect → nt-implement → nt-strategy-builder → nt-review
 | `Quantity - Quantity` expecting `Decimal` result | **v1.223.0**: returns `Quantity`; negative result raises `ValueError` |
 | `trade_execution=True` in bar-only backtests | **v1.223.0**: default changed to `True`; set `False` explicitly for bar-only |
 | `x += y` for `Price`/`Quantity`/`Money` in Rust | **v1.223.0**: `AddAssign`/`SubAssign` removed — use `x = x + y` |
+| `fill_limit_at_touch` in FillModel | **v1.224.0**: Renamed to `fill_limit_inside_spread` |
+| Coinbase International adapter (`COINBASE_INTX`) | **v1.224.0**: Entire package removed — use different venue |
+| `InstrumentProvider.load_ids_async` override | **v1.224.0**: Now has default — only `load_all_async` required |
+| Hyperliquid `builder_fee_refresh_mins` | **v1.224.0**: Config removed |
 
 ## COMMANDS
 

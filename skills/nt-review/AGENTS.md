@@ -106,6 +106,14 @@ Quick check + Conventions + Trading Correctness + Performance + Testability + (i
 ### v1.223.0 Rust Breaking Change
 `AddAssign`/`SubAssign` removed from `Price`/`Quantity`/`Money`. Use `x = x + y` not `x += y`.
 
+### v1.224.0 Changes
+- `fill_limit_at_touch` → `fill_limit_inside_spread`; `BestPriceFillModel` fills inside spread by default
+- Coinbase International adapter (`COINBASE_INTX`) fully removed
+- `InstrumentProvider` only needs `load_all_async`; `load_ids_async`/`load_async` have defaults
+- Binance Ed25519 Spot/Margin raises `ValueError`; Futures soft-deprecated
+- Hyperliquid `builder_fee_refresh_mins` config removed
+- WS `connect()` needs `loop_=self._loop` in adapter code
+
 ## LIVE TRADING CHECKLIST (9+ items)
 
 - [ ] Reconciliation enabled with appropriate lookback (≥60 min)

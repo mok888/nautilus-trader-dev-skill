@@ -1,5 +1,5 @@
 # -------------------------------------------------------------------------------------------------
-#  Copyright (C) 2015-2025 Nautech Systems Pty Ltd. All rights reserved.
+#  Copyright (C) 2015-2026 Nautech Systems Pty Ltd. All rights reserved.
 #  https://nautechsystems.io
 #
 #  Licensed under the GNU Lesser General Public License Version 3.0 (the "License");
@@ -65,7 +65,6 @@ class CustomFillModel(FillModel):
     ) -> None:
         super().__init__(
             prob_fill_on_limit=prob_fill_on_limit,
-            prob_fill_on_stop=1.0,  # Deprecated: use prob_slippage
             prob_slippage=prob_slippage,
             random_seed=random_seed,
         )
@@ -146,7 +145,6 @@ class VolatilityAdjustedFillModel(FillModel):
     ) -> None:
         super().__init__(
             prob_fill_on_limit=base_prob_fill_on_limit,
-            prob_fill_on_stop=1.0,
             prob_slippage=base_prob_slippage,
             random_seed=random_seed,
         )
@@ -169,12 +167,16 @@ class VolatilityAdjustedFillModel(FillModel):
 
     def is_limit_filled(self) -> bool:
         """Higher volatility = more likely to fill (price moves through levels)."""
-        adjusted = min(1.0, self._base_fill_prob * self._current_volatility * self._vol_fill_mult)
+        adjusted = min(
+            1.0, self._base_fill_prob * self._current_volatility * self._vol_fill_mult
+        )
         return self._random.random() < adjusted
 
     def is_slipped(self) -> bool:
         """Higher volatility = more likely to slip (faster markets)."""
-        adjusted = min(1.0, self._base_slip_prob * self._current_volatility * self._vol_slip_mult)
+        adjusted = min(
+            1.0, self._base_slip_prob * self._current_volatility * self._vol_slip_mult
+        )
         return self._random.random() < adjusted
 
 
@@ -196,7 +198,6 @@ class TimeBasedFillModel(FillModel):
     ) -> None:
         super().__init__(
             prob_fill_on_limit=base_prob_fill_on_limit,
-            prob_fill_on_stop=1.0,
             prob_slippage=0.0,
             random_seed=random_seed,
         )
