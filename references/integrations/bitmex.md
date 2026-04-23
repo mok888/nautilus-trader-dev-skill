@@ -8,7 +8,7 @@ ingest and order execution with BitMEX.
 ## Overview
 
 This adapter is implemented in Rust, with optional Python bindings for ease of use in Python-based workflows.
-It does not require external BitMEX client libraries—the core components are compiled as a static library and linked automatically during the build.
+It does not require external BitMEX client libraries; the core components are compiled as a static library and linked automatically during the build.
 
 ## Examples
 
@@ -29,7 +29,7 @@ on the use case.
 - `BitmexLiveExecClientFactory`: Factory for BitMEX execution clients (used by the trading node builder).
 
 :::note
-Most users will simply define a configuration for a live trading node (as below),
+Most users will define a configuration for a live trading node (as below),
 and won't need to necessarily work with these lower level components directly.
 :::
 
@@ -54,6 +54,7 @@ NautilusTrader integration guide.
 |-------------------|-----------|---------|-----------------------------------------------------|
 | Spot              | ✓         | ✓       | Limited pairs, unified wallet with derivatives.     |
 | Perpetual Swaps   | ✓         | ✓       | Inverse and linear contracts available.             |
+| Stock Perpetuals  | -         | -       | *Not yet supported*. Currently on testnet only.     |
 | Futures           | ✓         | ✓       | Traditional fixed expiration contracts.             |
 | Quanto Futures    | ✓         | ✓       | Settled in different currency than underlying.      |
 | Prediction Markets| ✓         | ✓       | Event-based contracts, 0-100 pricing, USDT settled. |
@@ -75,6 +76,25 @@ BitMEX has discontinued their options products to focus on their core derivative
 - **Traditional futures**: Fixed expiration date contracts.
 - **Quanto futures**: Contracts settled in a different currency than the underlying.
 - **Prediction markets**: Event-based derivatives (e.g., P_FTXZ26, P_SBFJAILZ26) allowing traders to speculate on outcomes across crypto, finance, and other events. No leverage, priced 0-100, settled in USDT.
+- **Stock perpetuals**: Equity-based perpetuals (e.g., SPYUSDT, CRCLUSDT). *Currently on testnet only; not yet supported by this adapter.*
+
+### Instrument type codes (CFI)
+
+BitMEX uses CFI (Classification of Financial Instruments) codes following the ISO 10962 standard.
+The adapter recognizes the following instrument type codes:
+
+| Code     | Type                 | Status      | Description                                     |
+|----------|----------------------|-------------|-------------------------------------------------|
+| `FFWCSX` | Perpetual Contract   | Supported   | Crypto-based perpetual swaps (e.g., XBTUSD).    |
+| `FFWCSF` | Perpetual FX         | Supported   | FX-based perpetual contracts.                   |
+| `FFCCSX` | Futures              | Supported   | Calendar futures with fixed expiration.         |
+| `FFICSX` | Prediction Market    | Supported   | Event-based prediction contracts.               |
+| `IFXXXP` | Spot                 | Supported   | Spot trading pairs.                             |
+| `FFSCSX` | Stock Perpetual      | Unsupported | Stock/equity-based perpetuals. Testnet only.    |
+| `SRMCSX` | Swap Rate            | Unsupported | Yield-based swap products (historical).         |
+| `MR****` | Index                | Reference   | BitMEX indices (non-tradeable, for price ref).  |
+
+See [BitMEX Typ Values](https://support.bitmex.com/hc/en-gb/articles/6299296145565-What-are-the-Typ-Values-for-Instrument-endpoint) for more details.
 
 ## Symbology
 
@@ -174,7 +194,7 @@ The BitMEX integration supports the following order types and execution features
 | `STOP_LIMIT`           | ✓         | Supported (set `price` and `trigger_price`).  |
 | `MARKET_IF_TOUCHED`    | ✓         | Supported (set `trigger_price`).              |
 | `LIMIT_IF_TOUCHED`     | ✓         | Supported (set `price` and `trigger_price`).  |
-| `TRAILING_STOP_MARKET` | -         | *Not implemented* (supported by BitMEX).      |
+| `TRAILING_STOP_MARKET` | ✓         | Supported (set `trailing_offset`). Price offset type only. |
 
 ### Execution instructions
 
@@ -226,6 +246,79 @@ order = self.order_factory.stop_market(
 `ExecTester` example configuration also demonstrates setting `stop_trigger_type=TriggerType.MARK_PRICE`
 in `examples/live/bitmex/bitmex_exec_tester.py`.
 
+### Trailing stops
+
+BitMEX supports trailing stop orders that automatically adjust the stop price as the market moves
+favorably. The adapter maps `TRAILING_STOP_MARKET` orders to BitMEX's pegged orders with
+`TrailingStopPeg` price type.
+
+**Limitations:**
+
+- Only `PRICE` trailing offset type is supported (absolute price offset, not basis points or ticks).
+- The offset sign is handled automatically: sell stops use negative offset, buy stops use positive.
+- Trigger type can be combined with trailing stops for additional control.
+
+**Example**:
+
+```python
+from nautilus_trader.model.enums import TrailingOffsetType
+
+order = self.order_factory.trailing_stop_market(
+    instrument_id=instrument_id,
+    order_side=OrderSide.SELL,
+    quantity=qty,
+    trailing_offset=Decimal("100"),  # $100 trailing offset
+    trailing_offset_type=TrailingOffsetType.PRICE,
+    trigger_type=TriggerType.LAST_PRICE,  # Optional
+)
+```
+
+:::note
+BitMEX updates trailing stop prices periodically as the market moves.
+The stop price freezes when the market moves toward the trigger level.
+See the [BitMEX API documentation](https://www.bitmex.com/app/perpetualContractsGuide) for current update cadence details.
+:::
+
+### Pegged orders
+
+BitMEX supports pegged orders (BBO) that automatically track a reference price. The adapter
+supports pegged orders via the `params` dict on `submit_order`, which overrides the order type
+to `Pegged` on the exchange side.
+
+| Peg price type | Description                                                      |
+|----------------|------------------------------------------------------------------|
+| `PrimaryPeg`   | Pegs to the best bid (buy) or best ask (sell).                   |
+| `MarketPeg`    | Pegs to the opposite side (best ask for buy, best bid for sell). |
+| `MidPricePeg`  | Pegs to the mid-price between bid and ask.                       |
+| `LastPeg`      | Pegs to the last traded price.                                   |
+
+**Requirements**:
+
+- The underlying order must be a `LIMIT` order. Other order types are rejected.
+- `peg_price_type` is required; `peg_offset_value` is optional (defaults to 0).
+- `peg_offset_value` can be negative (e.g., sell-side offsets) or fractional.
+
+**Example**:
+
+```python
+# Pegged to best bid with zero offset (BBO)
+order = self.order_factory.limit(
+    instrument_id=instrument_id,
+    order_side=OrderSide.BUY,
+    quantity=qty,
+    price=price,  # Required for LIMIT order, but overridden by peg
+)
+self.submit_order(order, params={"peg_price_type": "PrimaryPeg", "peg_offset_value": "0"})
+
+# Pegged to mid-price with a -0.5 offset
+self.submit_order(order, params={"peg_price_type": "MidPricePeg", "peg_offset_value": "-0.5"})
+```
+
+:::note
+The `price` field is still required when constructing the `LimitOrder`, but BitMEX ignores it
+for pegged orders and instead continuously tracks the reference price plus offset.
+:::
+
 ### Time in force
 
 | Time in force  | Supported | Notes                                               |
@@ -243,13 +336,13 @@ See the [BitMEX Exchange Rules](https://www.bitmex.com/exchange-rules) and [API 
 
 ### Advanced order features
 
-| Feature            | Supported | Notes                                          |
-|--------------------|-----------|------------------------------------------------|
-| Order Modification | ✓         | Modify price, quantity, and trigger price.     |
-| Bracket Orders     | -         | Use `contingency_type` and `linked_order_ids`. |
-| Iceberg Orders     | ✓         | Use `display_qty`.                             |
-| Trailing Stops     | -         | *Not implemented* (supported by BitMEX).       |
-| Pegged Orders      | -         | *Not implemented* (supported by BitMEX).       |
+| Feature            | Supported | Notes                                                                    |
+|--------------------|-----------|--------------------------------------------------------------------------|
+| Order Modification | ✓         | Modify price, quantity, and trigger price.                               |
+| Bracket Orders     | ✓         | Use `contingency_type` and `linked_order_ids`.                           |
+| Iceberg Orders     | ✓         | Use `display_qty`.                                                       |
+| Trailing Stops     | ✓         | Use `trailing_offset`. Price offset type only.                           |
+| Pegged Orders      | ✓         | Use `params` with `peg_price_type`. See [Pegged orders](#pegged-orders). |
 
 ### Batch operations
 
@@ -279,7 +372,7 @@ See the [BitMEX Exchange Rules](https://www.bitmex.com/exchange-rules) and [API 
 ## Market data
 
 - Order book deltas: `L2_MBP` only; `depth` 0 (full book) or 25.
-- Order book snapshots: `L2_MBP` only; `depth` 0 (default 10) or 10.
+- Order book depth10 snapshots: fixed 10 levels via `orderBook10` channel.
 - Quotes, trades, and instrument updates are supported via WebSocket.
 - Funding rates, mark prices, and index prices are supported where applicable.
 - Historical requests via REST:
@@ -295,7 +388,7 @@ first page; wider pagination support is scheduled for a future update.
 
 ### HTTP Keep-Alive
 
-The BitMEX adapter utilizes HTTP keep-alive for optimal performance:
+The BitMEX adapter uses HTTP keep-alive for optimal performance:
 
 - **Connection pooling**: Connections are automatically pooled and reused.
 - **Keep-alive timeout**: 90 seconds (matches BitMEX server-side timeout).
@@ -322,7 +415,7 @@ BitMEX implements a dual-layer rate limiting system:
 - **Rolling minute limit**: 120 requests per minute for authenticated users (30 requests per minute for unauthenticated users).
 - **Order caps**: 200 open orders and 10 stop orders per symbol; exceeding these caps triggers exchange-side rejections.
 
-The adapter enforces these quotas automatically and surfaces the rate-limit headers BitMEX returns with each response.
+The adapter enforces these quotas locally using the configured `max_requests_per_second` and `max_requests_per_minute` values.
 
 ### WebSocket limits
 
@@ -351,7 +444,7 @@ For more details on rate limiting, see the [BitMEX API documentation on rate lim
 
 The cancel broadcaster (when `canceller_pool_size > 1`) fans out each cancel request to multiple independent HTTP clients in parallel. Each client maintains its own rate limiter, which means the effective request rate is multiplied by the pool size.
 
-**Example**: With `canceller_pool_size=3` (default) and `max_requests_per_second=10`, a single cancel operation consumes **3 requests** (one per client), potentially reaching **30 requests/second** if canceling rapidly.
+**Example**: With `canceller_pool_size=3` and `max_requests_per_second=10`, a single cancel operation consumes **3 requests** (one per client), potentially reaching **30 requests/second** if canceling rapidly.
 
 Since BitMEX enforces rate limits **at the account level** (not per connection), the broadcaster can push you over the exchange's default limits of 10 req/s burst and 120 req/min rolling window.
 
@@ -368,6 +461,95 @@ BitMEX exposes the current allowance via response headers:
 - `x-ratelimit-reset`: UNIX timestamp when the allowance resets.
 - `retry-after`: seconds to wait after a 429 response.
 
+## Submit broadcaster
+
+The BitMEX execution client includes a submit broadcaster that provides higher assurance of market and limit orders being accepted at target prices through parallel request fanout, trading lower minimum latency for the risk of duplicate submissions.
+
+### Concepts
+
+Order submissions are time-critical operations - when a strategy decides to enter a position, any delay can result in missed opportunities or adverse pricing. The submit broadcaster addresses this by:
+
+- **Parallel fanout**: Submit requests are simultaneously broadcast to multiple independent HTTP client instances.
+- **First-success short-circuiting**: The first successful response wins, minimizing latency to acceptance.
+- **Shared client_order_id**: All transports use the same `client_order_id`. BitMEX rejects duplicate submissions with "duplicate clOrdID" (tracked as expected rejections).
+- **Latency vs. duplicates tradeoff**: Accepts the risk of potential duplicate fills (if multiple transports succeed before rejection) in exchange for lower minimum latency and higher assurance of acceptance.
+
+This architecture reduces the minimum latency to order acceptance by parallelizing across multiple network paths.
+
+### Usage
+
+The submit broadcaster is opt-in and controlled via the `submit_tries` parameter when submitting orders. By default, orders are submitted through a single HTTP client. To enable broadcasting:
+
+```python
+# Single submission (default behavior)
+self.submit_order(order)
+
+# Broadcast to 2 parallel HTTP clients for redundancy
+self.submit_order(order, params={"submit_tries": 2})
+
+# Broadcast to 3 parallel HTTP clients (maximum recommended)
+self.submit_order(order, params={"submit_tries": 3})
+```
+
+**Key points**:
+
+- `submit_tries` must be a positive integer.
+- Broadcasting only occurs when `submit_tries > 1`. Default submits go through a single HTTP client.
+- If `submit_tries` exceeds `submitter_pool_size`, it will be capped at the pool size with a warning.
+- All transports use the same `client_order_id`; BitMEX rejects duplicates as expected rejections.
+
+### Health monitoring
+
+Each HTTP client in the broadcaster pool maintains health metrics:
+
+- Successful submissions mark a client as healthy.
+- Failed requests increment error counters.
+- Background health checks periodically verify client connectivity.
+- Degraded clients are tracked but remain in the pool to maintain fault tolerance.
+
+The broadcaster exposes metrics including total submits, successful submits, failed submits, and expected rejects for operational monitoring and debugging.
+
+#### Tracked metrics
+
+| Metric                   | Type   | Description                                                                                                           |
+|--------------------------|--------|-----------------------------------------------------------------------------------------------------------------------|
+| `total_submits`          | `u64`  | Total number of submit operations initiated.                                                                          |
+| `successful_submits`     | `u64`  | Number of submit operations that successfully received acknowledgement from BitMEX.                                   |
+| `failed_submits`         | `u64`  | Number of submit operations where all HTTP clients in the pool failed (no healthy clients or all requests failed).    |
+| `expected_rejects`       | `u64`  | Number of expected rejection patterns detected (e.g., duplicate clOrdID from parallel submissions).                   |
+| `healthy_clients`        | `usize`| Current number of healthy HTTP clients in the pool (clients that passed recent health checks).                        |
+| `total_clients`          | `usize`| Total number of HTTP clients configured in the pool (`submitter_pool_size`).                                          |
+
+These metrics can be accessed programmatically via the `get_metrics()` method on the `SubmitBroadcaster` instance.
+
+### Configuration
+
+The submit broadcaster is configured via the execution client configuration:
+
+| Option                 | Default | Description                                                                               |
+|------------------------|---------|-------------------------------------------------------------------------------------------|
+| `submitter_pool_size`  | `None`  | Size of the HTTP client pool. `None` resolves to 1 (single client, no redundancy). |
+| `submitter_proxy_urls` | `None`  | Optional list of proxy URLs for submit broadcaster path diversity. *Not yet wired through Python integration.* |
+
+**Example configuration**:
+
+```python
+from nautilus_trader.adapters.bitmex.config import BitmexExecClientConfig
+
+exec_config = BitmexExecClientConfig(
+    api_key="YOUR_API_KEY",
+    api_secret="YOUR_API_SECRET",
+    submitter_pool_size=3,  # Recommended pool size for redundancy
+)
+```
+
+:::tip
+For HFT strategies without higher rate limits, consider the advantages of using the submit broadcaster against potentially hitting rate limits, as each client has an independent rate limit budget.
+The default `submitter_pool_size=None` disables the broadcaster. The recommended setting of `submitter_pool_size=3` broadcasts each submit request to 3 parallel HTTP clients for fault tolerance, which consumes 3× the rate limit quota per submit operation but provides higher assurance against network or exchange issues.
+:::
+
+The broadcaster is automatically started when the execution client connects and stopped when it disconnects. Submit operations are routed through the broadcaster only when `submit_tries > 1`; default submits use a single HTTP client directly.
+
 ## Cancel broadcaster
 
 The BitMEX execution client includes a cancel broadcaster that provides fault-tolerant order cancellation through parallel request fanout.
@@ -381,7 +563,7 @@ Order cancellations are time-critical operations - when a strategy decides to ca
 - **Fault tolerance**: If one HTTP client experiences network issues, DNS failures, or connection timeouts, other clients in the pool continue processing.
 - **Idempotent success handling**: Responses indicating the order was already canceled (such as "orderID not found" or similar idempotent states) are treated as success rather than failure, preventing unnecessary error propagation.
 
-This architecture ensures that a single network path failure or slow connection doesn't block critical cancel operations, improving the reliability of risk management and position control in live trading.
+This architecture ensures that a single network path failure or slow connection doesn't block cancel operations, improving the reliability of risk management and position control in live trading.
 
 ### Health monitoring
 
@@ -406,15 +588,16 @@ The broadcaster exposes metrics including total cancels, successful cancels, fai
 | `healthy_clients`        | `usize`| Current number of healthy HTTP clients in the pool (clients that passed recent health checks).                        |
 | `total_clients`          | `usize`| Total number of HTTP clients configured in the pool (`canceller_pool_size`).                                          |
 
-These metrics can be accessed programmatically via the `get_metrics()` and `get_metrics_async()` methods on the `CancelBroadcaster` instance.
+These metrics can be accessed programmatically via the `get_metrics()` method on the `CancelBroadcaster` instance.
 
 ### Configuration
 
 The cancel broadcaster is configured via the execution client configuration:
 
-| Option                | Default | Description                                                                               |
-|-----------------------|---------|-------------------------------------------------------------------------------------------|
-| `canceller_pool_size` | `3`     | Size of the HTTP client pool for the broadcaster. Higher values increase fault tolerance but consume more resources. |
+| Option                 | Default | Description                                                                               |
+|------------------------|---------|-------------------------------------------------------------------------------------------|
+| `canceller_pool_size`  | `None`  | Size of the HTTP client pool. `None` resolves to 1 (single client, no redundancy). |
+| `canceller_proxy_urls` | `None`  | Optional list of proxy URLs for cancel broadcaster path diversity. *Not yet wired through Python integration.* |
 
 **Example configuration**:
 
@@ -424,17 +607,109 @@ from nautilus_trader.adapters.bitmex.config import BitmexExecClientConfig
 exec_config = BitmexExecClientConfig(
     api_key="YOUR_API_KEY",
     api_secret="YOUR_API_SECRET",
-    canceller_pool_size=3,  # Default pool size
+    canceller_pool_size=3,  # Recommended pool size for redundancy
 )
 ```
 
 :::tip
-For HFT strategies without higher rate limits, consider reducing `canceller_pool_size=1` to minimize rate limit consumption.
-The default pool size of 3 broadcasts each cancel request to 3 parallel HTTP clients for fault tolerance, which consumes 3× the rate limit quota per cancel operation.
-Single-client mode still benefits from the broadcaster's idempotent success handling but uses standard rate limits.
+For HFT strategies without higher rate limits, consider the advantages of using the cancel broadcaster against potentially hitting rate limits, as each client has an independent rate limit budget.
+The default `canceller_pool_size=None` disables the broadcaster. The recommended setting of `canceller_pool_size=3` broadcasts each cancel request to 3 parallel HTTP clients for fault tolerance, which consumes 3× the rate limit quota per cancel operation but provides higher assurance against network or exchange issues.
 :::
 
 The broadcaster is automatically started when the execution client connects and stopped when it disconnects. All cancel operations (`cancel_order`, `cancel_all_orders`, `batch_cancel_orders`) are automatically routed through the broadcaster without requiring any changes to strategy code.
+
+## Dead man's switch
+
+The adapter supports BitMEX's [dead man's switch](https://www.bitmex.com/app/restAPI#OrdercancelAllAfter)
+(`cancelAllAfter`), which provides automatic order cancellation as a safety net against
+connectivity failures.
+
+### How it works
+
+When enabled, a server-side timer is set on BitMEX. If the timer expires without being
+refreshed, BitMEX cancels **all** open orders on the account. The adapter keeps the timer
+alive by sending periodic heartbeat requests. If the adapter loses connectivity (network
+failure, process crash, etc.), the heartbeats stop and BitMEX cancels the orders after the
+configured timeout.
+
+The flow:
+
+1. On **connect**, the adapter calls `POST /api/v1/order/cancelAllAfter` with the configured
+   timeout (in milliseconds) to arm the server-side timer.
+2. A background task sends the same request at a **refresh interval** of `timeout / 4`
+   (minimum 1 second) to keep resetting the timer before it expires.
+3. On **disconnect**, the adapter waits for the background heartbeat task to fully shut
+   down, then calls `cancelAllAfter` with `timeout=0` to **disarm** the server-side timer.
+
+For example, with a 60-second timeout the adapter sends a heartbeat every 15 seconds.
+If four consecutive heartbeats fail (60 seconds of lost connectivity), BitMEX cancels
+all open orders.
+
+### Disconnect ordering
+
+Disarming the dead man's switch during disconnect requires careful ordering. The disarm
+request (`timeout=0`) should be the last `cancelAllAfter` call to reach BitMEX. If an
+in-flight heartbeat were processed after the disarm, it would re-arm the server-side timer
+and orders could be unexpectedly cancelled after the timeout expires, even though the
+adapter disconnected gracefully.
+
+The adapter mitigates this in both implementations:
+
+- **Rust**: The heartbeat task is immediately stopped (abort + await) so disconnect does
+  not stall waiting for a sleep or HTTP timeout to elapse. The disarm request is then sent
+  after the task has exited.
+- **Python**: The heartbeat task is cancelled and awaited, ensuring the coroutine fully
+  unwinds before the disarm request is sent.
+
+In a force-stop scenario (e.g., process shutdown via `stop()`), the heartbeat task is
+aborted without disarming. This is intentional, as the server-side timer provides the
+desired safety behavior when the process exits unexpectedly.
+
+:::note
+Each heartbeat consumes one REST rate limit token. A 60-second timeout uses approximately
+4 requests per minute from the 120/min budget.
+:::
+
+### Configuration
+
+Enable the dead man's switch by setting `deadmans_switch_timeout_secs` on the execution
+client config:
+
+```python
+from nautilus_trader.adapters.bitmex.config import BitmexExecClientConfig
+
+exec_config = BitmexExecClientConfig(
+    api_key="YOUR_API_KEY",
+    api_secret="YOUR_API_SECRET",
+    deadmans_switch_timeout_secs=60,  # Cancel all orders after 60s of lost connectivity
+)
+```
+
+When enabled, the adapter logs:
+
+```
+Starting dead man's switch: timeout=60s, refresh_interval=15s
+```
+
+on connect, and:
+
+```
+Disarming dead man's switch
+```
+
+on disconnect.
+
+:::tip
+A timeout of **60 seconds** is the recommended starting point. Shorter timeouts provide
+faster protection but are more sensitive to transient network blips. Longer timeouts are
+more tolerant of brief outages but leave orders exposed longer during a real failure.
+:::
+
+:::warning
+The dead man's switch applies to **all** open orders on the account, not just orders placed
+by the adapter. If other systems place orders on the same account, enabling the dead man's
+switch will affect those orders too.
+:::
 
 ## Configuration
 
@@ -469,8 +744,8 @@ The BitMEX data client provides the following configuration options:
 
 | Option                            | Default  | Description |
 |-----------------------------------|----------|-------------|
-| `api_key`                         | `None`   | Optional API key; if `None`, loaded from `BITMEX_API_KEY`. |
-| `api_secret`                      | `None`   | Optional API secret; if `None`, loaded from `BITMEX_API_SECRET`. |
+| `api_key`                         | `None`   | Optional API key; if `None`, loaded from `BITMEX_API_KEY` or `BITMEX_TESTNET_API_KEY` (when `testnet=True`). |
+| `api_secret`                      | `None`   | Optional API secret; if `None`, loaded from `BITMEX_API_SECRET` or `BITMEX_TESTNET_API_SECRET` (when `testnet=True`). |
 | `base_url_http`                   | `None`   | Override for the REST base URL (defaults to production). |
 | `base_url_ws`                     | `None`   | Override for the WebSocket base URL (defaults to production). |
 | `testnet`                         | `False`  | Route requests to the BitMEX testnet when `True`. |
@@ -482,6 +757,8 @@ The BitMEX data client provides the following configuration options:
 | `update_instruments_interval_mins`| `60`     | Interval (minutes) between instrument catalogue refreshes. |
 | `max_requests_per_second`         | `10`     | Burst rate limit enforced by the adapter for REST calls. |
 | `max_requests_per_minute`         | `120`    | Rolling minute rate limit enforced by the adapter for REST calls. |
+| `http_proxy_url`                  | `None`   | Optional HTTP proxy URL. |
+| `ws_proxy_url`                    | `None`   | Optional WebSocket proxy URL. *Not yet implemented; reserved for future use.* |
 
 ### Execution client configuration options
 
@@ -489,8 +766,8 @@ The BitMEX execution client provides the following configuration options:
 
 | Option                   | Default  | Description |
 |--------------------------|----------|-------------|
-| `api_key`                | `None`   | Optional API key; if `None`, loaded from `BITMEX_API_KEY`. |
-| `api_secret`             | `None`   | Optional API secret; if `None`, loaded from `BITMEX_API_SECRET`. |
+| `api_key`                | `None`   | Optional API key; if `None`, loaded from `BITMEX_API_KEY` or `BITMEX_TESTNET_API_KEY` (when `testnet=True`). |
+| `api_secret`             | `None`   | Optional API secret; if `None`, loaded from `BITMEX_API_SECRET` or `BITMEX_TESTNET_API_SECRET` (when `testnet=True`). |
 | `base_url_http`          | `None`   | Override for the REST base URL (defaults to production). |
 | `base_url_ws`            | `None`   | Override for the WebSocket base URL (defaults to production). |
 | `testnet`                | `False`  | Route orders to the BitMEX testnet when `True`. |
@@ -501,7 +778,13 @@ The BitMEX execution client provides the following configuration options:
 | `recv_window_ms`         | `10,000` | Expiration window (milliseconds) for signed requests. See [Request authentication](#request-authentication-and-expiration). |
 | `max_requests_per_second`| `10`     | Burst rate limit enforced by the adapter for REST calls. |
 | `max_requests_per_minute`| `120`    | Rolling minute rate limit enforced by the adapter for REST calls. |
-| `canceller_pool_size`    | `3`      | Number of redundant HTTP clients in the cancel broadcaster pool. See [Cancel broadcaster](#cancel-broadcaster). |
+| `deadmans_switch_timeout_secs` | `None`   | Timeout in seconds for the dead man's switch. `None` disables. See [Dead man's switch](#dead-mans-switch). |
+| `canceller_pool_size`    | `None`   | Number of HTTP clients in the cancel broadcaster pool. `None` resolves to 1. See [Cancel broadcaster](#cancel-broadcaster). |
+| `submitter_pool_size`    | `None`   | Number of HTTP clients in the submit broadcaster pool. `None` resolves to 1. See [Submit broadcaster](#submit-broadcaster). |
+| `http_proxy_url`         | `None`   | Optional HTTP proxy URL. |
+| `ws_proxy_url`           | `None`   | Optional WebSocket proxy URL. *Not yet implemented; reserved for future use.* |
+| `submitter_proxy_urls`   | `None`   | Optional list of proxy URLs for submit broadcaster path diversity. *Not yet wired through Python integration.* |
+| `canceller_proxy_urls`   | `None`   | Optional list of proxy URLs for cancel broadcaster path diversity. *Not yet wired through Python integration.* |
 
 ### Configuration examples
 
@@ -513,7 +796,7 @@ from nautilus_trader.adapters.bitmex.config import BitmexExecClientConfig
 
 # Using environment variables (recommended)
 testnet_data_config = BitmexDataClientConfig(
-    testnet=True,  # API credentials loaded from BITMEX_API_KEY and BITMEX_API_SECRET
+    testnet=True,  # API credentials loaded from BITMEX_TESTNET_API_KEY and BITMEX_TESTNET_API_SECRET
 )
 
 # Using explicit credentials
@@ -547,7 +830,7 @@ native `clOrdLinkID`/`contingencyType` mechanics. When the engine submits
 
 This means common bracket flows (entry + stop + take-profit) and multi-leg stop structures can
 now be managed directly by BitMEX instead of being emulated client-side. When defining
-strategies, continue to use Nautilus `OrderList`/`ContingencyType` abstractions—the adapter
+strategies, continue to use Nautilus `OrderList`/`ContingencyType` abstractions. The adapter
 handles the required BitMEX wiring automatically.
 
 ### Contract specifications
@@ -571,6 +854,8 @@ handles the required BitMEX wiring automatically.
 - **Taker fees**: Positive fee for taking liquidity.
 - **Funding rates**: Apply to perpetual contracts every 8 hours.
 - **Prediction market fees**: Maker 0.00%, Taker 0.25% (no leverage allowed).
+
+## Contributing
 
 :::info
 For additional features or to contribute to the BitMEX adapter, please see our

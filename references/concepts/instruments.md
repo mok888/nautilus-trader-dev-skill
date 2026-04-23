@@ -3,20 +3,22 @@
 The `Instrument` base class represents the core specification for any tradable asset/contract. There are
 currently a number of subclasses representing a range of *asset classes* and *instrument classes* which are supported by the platform:
 
-- `Equity` (listed shares or ETFs traded on cash markets)
-- `FuturesContract` (deliverable futures contract with defined underlying, expiry, and multiplier)
-- `FuturesSpread` (exchange-defined multi-leg futures strategy—e.g., calendar or inter-commodity—quoted as one instrument)
-- `OptionContract` (exchange-traded option—put or call—on an underlying with strike and expiry)
-- `OptionSpread` (exchange-defined multi-leg options strategy—e.g., vertical, calendar, straddle—quoted as one instrument)
-- `BinaryOption` (fixed-payout option that settles to 0 or 1 based on a binary outcome)
-- `Cfd` (over-the-counter Contract for Difference that tracks an underlying and is cash-settled)
-- `Commodity` (spot commodity instrument—e.g., gold or oil—traded in cash markets)
-- `CurrencyPair` (spot FX or crypto pair in BASE/QUOTE format traded in cash markets)
-- `CryptoOption` (option on a crypto underlying with crypto quote/settlement; supports inverse or quanto styles)
-- `CryptoPerpetual` (perpetual futures contract—aka perpetual swap—on crypto with no expiry; can be inverse or quanto-settled)
-- `CryptoFuture` (dated, deliverable crypto futures contract with fixed expiry, underlying crypto, and settlement currency)
-- `IndexInstrument` (spot index calculated from constituents; used as a reference price and not directly tradable)
-- `BettingInstrument` (a sports/gaming market selection—e.g., team or runner—tradable on betting venues)
+- `Equity`: Listed shares or ETFs traded on cash markets.
+- `CurrencyPair`: Spot FX or crypto pair in BASE/QUOTE format traded in cash markets.
+- `Commodity`: Spot commodity instrument (e.g., gold or oil) traded in cash markets.
+- `IndexInstrument`: Spot index calculated from constituents; used as a reference price and not directly tradable.
+- `FuturesContract`: Deliverable futures contract with defined underlying, expiry, and multiplier.
+- `FuturesSpread`: Exchange-defined multi-leg futures strategy (e.g., calendar or inter-commodity) quoted as one instrument.
+- `CryptoFuture`: Dated, deliverable crypto futures contract with fixed expiry, underlying crypto, and settlement currency.
+- `CryptoPerpetual`: Perpetual futures contract (perpetual swap) on crypto with no expiry; can be inverse or quanto-settled.
+- `PerpetualContract`: Asset-class agnostic perpetual swap for any underlying (FX, equities, commodities, indexes, crypto).
+- `OptionContract`: Exchange-traded option (put or call) on an underlying with strike and expiry.
+- `OptionSpread`: Exchange-defined multi-leg options strategy (e.g., vertical, calendar, straddle) quoted as one instrument.
+- `CryptoOption`: Option on a crypto underlying with crypto quote/settlement; supports inverse or quanto styles.
+- `BinaryOption`: Fixed-payout option that settles to 0 or 1 based on a binary outcome.
+- `Cfd`: Over-the-counter Contract for Difference that tracks an underlying and is cash-settled.
+- `BettingInstrument`: Sports/gaming market selection (e.g., team or runner) tradable on betting venues.
+- `SyntheticInstrument`: Synthetic instrument with prices derived from component instruments using a formula.
 
 ## Symbology
 
@@ -109,16 +111,103 @@ def on_instrument(self, instrument: Instrument) -> None:
     pass
 ```
 
-## Precisions and increments
+## Precision
 
-The instrument objects are a convenient way to organize the specification of an
-instrument through *read-only* properties. Correct price and quantity precisions, as well as
-minimum price and size increments, multipliers and standard lot sizes, are available.
+Precision defines the number of decimal places allowed for prices and quantities on a
+given instrument. Every instrument specifies a `price_precision` and `size_precision`
+that determine the valid fractional resolution for that market.
 
-:::note
-Most of these limits are checked by the Nautilus `RiskEngine`, otherwise invalid
-values for prices and quantities *can* result in the exchange rejecting orders.
+NautilusTrader enforces precision strictly by design. This section explains the rationale
+and mechanics behind this approach.
+
+### Why precision is enforced
+
+**Realistic market simulation.** Real exchanges only accept prices and sizes at specific
+precisions. A crypto spot market may support prices to 2 decimal places (e.g., `50000.01`)
+while a different market supports 8 (e.g., `0.00012345`). Allowing arbitrary precision
+in a backtest would produce fills at price levels that could never exist in production,
+leading to misleading performance metrics.
+
+**Venue compatibility.** Most exchanges validate price and size precision on incoming
+orders and reject those that exceed the instrument's specification. Enforcing precision
+at the platform level catches a common class of these issues early. Note that venues may
+also enforce tick-multiple or step-size constraints beyond what the `RiskEngine` currently
+validates, so precision compliance alone does not guarantee venue acceptance.
+
+**Deterministic calculations.** Fixed-point arithmetic with explicit precision eliminates
+floating-point drift and ensures calculations are reproducible across platforms and
+environments. Two systems processing the same data will always produce identical results.
+
+**Data integrity.** The backtesting matching engine validates that all incoming market
+data (quotes, trades, bars) matches the instrument's declared precision. This catches
+mismatches between instrument definitions and data sources early, preventing silent
+corruption of fill prices and quantities.
+
+### How precision works
+
+Each instrument defines two precision values:
+
+| Field             | Constrains                           | Example            |
+|-------------------|--------------------------------------|--------------------|
+| `price_precision` | Order prices, trigger prices, fills. | `2` → `50000.01`  |
+| `size_precision`  | Order quantities, fill quantities.   | `5` → `1.00001`   |
+
+These precisions are paired with minimum increments:
+
+| Field             | Purpose                                  |
+|-------------------|------------------------------------------|
+| `price_increment` | Smallest valid price change (tick size). |
+| `size_increment`  | Smallest valid quantity change.          |
+
+The increment's own precision must exactly match the instrument's declared precision.
+For example, an instrument with `price_precision=2` and `price_increment=Price(0.01, 2)`
+is valid, but a mismatch between these values will raise an error at instrument creation.
+
+### Where precision is enforced
+
+Precision is validated at multiple levels throughout the platform:
+
+1. **Instrument creation**: The precision of `price_increment` and `size_increment` must
+   match `price_precision` and `size_precision` respectively.
+2. **Risk engine**: Before an order reaches the venue, the `RiskEngine` checks that the
+   order's price and quantity precision do not exceed the instrument's limits. Orders that
+   fail this check are denied.
+3. **Matching engine**: During backtesting, the matching engine validates that all incoming
+   market data matches the instrument's precision. Mismatches raise a `RuntimeError`
+   immediately.
+
+:::warning
+The `RiskEngine` does not round values automatically. If you create a `Price` with
+5 decimal places on an instrument that supports 2, the order will be denied. Use
+`instrument.make_price()` and `instrument.make_qty()` to round explicitly.
 :::
+
+### Working with instrument precision
+
+Use the instrument's factory methods to create values with correct precision:
+
+```python
+instrument = self.cache.instrument(instrument_id)
+
+price = instrument.make_price(0.90500)
+quantity = instrument.make_qty(150)
+```
+
+These methods round the input to the instrument's declared precision, ensuring the
+result will pass precision checks. Other validation rules still apply (e.g., min/max
+quantity limits), and `make_qty()` will raise if the rounded value is zero.
+
+:::tip
+Always use `instrument.make_price()` and `instrument.make_qty()` when creating order
+parameters. This avoids precision mismatch errors and ensures your values have the
+correct number of decimal places for the instrument.
+:::
+
+If you encounter precision mismatch errors during backtesting, verify that:
+
+1. The instrument definition matches your data source's precision.
+2. Data was not inadvertently rounded or truncated during loading.
+3. Custom data loaders preserve the original precision metadata.
 
 ## Limits
 
@@ -135,23 +224,6 @@ dependent and can include:
 :::note
 Most of these limits are checked by the Nautilus `RiskEngine`, otherwise exceeding
 published limits *can* result in the exchange rejecting orders.
-:::
-
-## Prices and quantities
-
-Instrument objects also offer a convenient way to create correct prices
-and quantities based on given values.
-
-```python
-instrument = self.cache.instrument(instrument_id)
-
-price = instrument.make_price(0.90500)
-quantity = instrument.make_qty(150)
-```
-
-:::tip
-The above is the recommended method for creating valid prices and quantities,
-such as when passing them to the order factory to create an order.
 :::
 
 ## Margins and fees
@@ -176,9 +248,9 @@ To understand trading on margin, let’s start with some key terms:
 - Each contract represents 125,000 EUR (EUR is base currency, USD is quote currency).
 - If the current market price is 1.1000, the notional value equals 125,000 EUR × 1.1000 (price of EUR/USD) = 137,500 USD.
 
-**Leverage** (`leverage`): The ratio that determines how much market exposure you can control relative to your account deposit. For example, with 10× leverage, you can control 10,000 USD worth of positions with just 1,000 USD in your account.
+**Leverage** (`leverage`): The ratio that determines how much market exposure you can control relative to your account deposit. For example, with 10× leverage, you can control 10,000 USD worth of positions with 1,000 USD in your account.
 
-**Initial Margin** (`margin_init`): The margin rate required to open a position. It represents the minimum amount of funds that must be available in your account to open new positions. This is only a pre-check — no funds are actually locked.
+**Initial Margin** (`margin_init`): The margin rate required to open a position. It represents the minimum amount of funds that must be available in your account to open new positions. This is only a pre-check; no funds are actually locked.
 
 **Maintenance Margin** (`margin_maint`): The margin rate required to keep a position open. This amount is locked in your account to maintain the position. It is always lower than the initial margin. You can view the total blocked funds (sum of maintenance margins for open positions) using the following in your strategy:
 
@@ -190,6 +262,17 @@ self.portfolio.balances_locked(venue)
 
 - Maker Fee (`maker_fee`): A fee (typically lower) charged when you "make" liquidity by placing an order that remains on the order book. For example, a limit buy order below the current price adds liquidity, and the *maker* fee applies when it fills.
 - Taker Fee (`taker_fee`): A fee (typically higher) charged when you "take" liquidity by placing an order that executes immediately. For instance, a market buy order or a limit buy above the current price removes liquidity, and the *taker* fee applies.
+
+**Fee rate sign convention**: Nautilus uses a consistent sign convention for fee rates across all adapters and the backtesting engine:
+
+- **Positive fee rate** = commission (fee charged, reducing account balance).
+- **Negative fee rate** = rebate (fee earned, increasing account balance).
+
+For example, a maker fee of `-0.00025` means you receive a 0.025% rebate for providing liquidity, while a taker fee of `0.00075` means you pay a 0.075% commission for taking liquidity.
+
+:::note
+Different exchanges use different sign conventions in their APIs. Nautilus adapters normalize these to the convention above. If you're manually specifying fee rates for backtesting, ensure you follow this convention.
+:::
 
 :::tip
 Not all exchanges or instruments implement maker/taker fees. If absent, set both `maker_fee` and `taker_fee` to 0 for the `Instrument` (e.g., `FuturesContract`, `Equity`, `CurrencyPair`, `Commodity`, `Cfd`, `BinaryOption`, `BettingInstrument`).
@@ -386,11 +469,11 @@ The `instrument_id` for the synthetic instrument in the above example will be st
 It's also possible to update a synthetic instrument formulas at any time. The following example
 shows how to achieve this with an actor/strategy.
 
-```
+```python
 # Recover the synthetic instrument from the cache (assuming `synthetic_id` was assigned)
 synthetic = self.cache.synthetic(self._synthetic_id)
 
-# Update the formula, here is a simple example of just taking the average
+# Update the formula to take the average
 new_formula = "(BTCUSDT.BINANCE + ETHUSDT.BINANCE) / 2"
 synthetic.change_formula(new_formula)
 
@@ -424,7 +507,9 @@ Considerable effort has been made to validate inputs, including the derivation f
 synthetic instruments. Despite this, caution is advised as invalid or erroneous inputs may lead to
 undefined behavior.
 
-:::info
-See the `SyntheticInstrument` [API reference](../api_reference/model/instruments.md#class-syntheticinstrument-1)
-for a detailed understanding of input requirements and potential exceptions.
-:::
+See the [`SyntheticInstrument` API Reference](../api_reference/model/instruments.md#class-syntheticinstrument-1) for input requirements and potential exceptions.
+
+## Related guides
+
+- [Data](data.md) - Market data types for instruments.
+- [Orders](orders.md) - Orders reference instruments.

@@ -4,18 +4,20 @@ NautilusTrader uses modular *adapters* to connect to trading venues and data pro
 
 The following integrations are currently supported:
 
-| Name                                                                         | ID                    | Type                    | Status                                                  | Docs                                   |
-| :--------------------------------------------------------------------------- | :-------------------- | :---------------------- | :------------------------------------------------------ | :------------------------------------- |
+| Name                                                                         | ID                    | Type                    | Status                                                  | Docs                      |
+| :--------------------------------------------------------------------------- | :-------------------- | :---------------------- | :------------------------------------------------------ | :------------------------ |
+| [AX Exchange](https://architect.exchange)                                    | `AX`                  | Perpetuals Exchange     | ![status](https://img.shields.io/badge/beta-yellow)     | [Guide](architect_ax.md)  |
+| [Architect](https://architect.co)                                            | `ARCHITECT`           | Brokerage (multi-venue) | ![status](https://img.shields.io/badge/planned-gray)    | -                         |
 | [Betfair](https://betfair.com)                                               | `BETFAIR`             | Sports Betting Exchange | ![status](https://img.shields.io/badge/stable-green)    | [Guide](betfair.md)       |
 | [Binance](https://binance.com)                                               | `BINANCE`             | Crypto Exchange (CEX)   | ![status](https://img.shields.io/badge/stable-green)    | [Guide](binance.md)       |
 | [BitMEX](https://www.bitmex.com)                                             | `BITMEX`              | Crypto Exchange (CEX)   | ![status](https://img.shields.io/badge/stable-green)    | [Guide](bitmex.md)        |
 | [Bybit](https://www.bybit.com)                                               | `BYBIT`               | Crypto Exchange (CEX)   | ![status](https://img.shields.io/badge/stable-green)    | [Guide](bybit.md)         |
-| [Coinbase International](https://www.coinbase.com/en/international-exchange) | `COINBASE_INTX`       | Crypto Exchange (CEX)   | ![status](https://img.shields.io/badge/stable-green)    | [Guide](coinbase_intx.md) |
 | [Databento](https://databento.com)                                           | `DATABENTO`           | Data Provider           | ![status](https://img.shields.io/badge/stable-green)    | [Guide](databento.md)     |
-| [dYdX](https://dydx.exchange/)                                               | `DYDX`                | Crypto Exchange (DEX)   | ![status](https://img.shields.io/badge/stable-green)    | [Guide](dydx.md)          |
-| [Hyperliquid](https://hyperliquid.xyz)                                       | `HYPERLIQUID`         | Crypto Exchange (DEX)   | ![status](https://img.shields.io/badge/building-orange) | [Guide](hyperliquid.md)   |
+| [Deribit](https://www.deribit.com)                                           | `DERIBIT`             | Crypto Exchange (CEX)   | ![status](https://img.shields.io/badge/beta-yellow)     | [Guide](deribit.md)       |
+| [dYdX](https://dydx.exchange/)                                               | `DYDX`                | Crypto Exchange (DEX)   | ![status](https://img.shields.io/badge/beta-yellow)     | [Guide](dydx.md)          |
+| [Hyperliquid](https://hyperliquid.xyz)                                       | `HYPERLIQUID`         | Crypto Exchange (DEX)   | ![status](https://img.shields.io/badge/beta-yellow)     | [Guide](hyperliquid.md)   |
 | [Interactive Brokers](https://www.interactivebrokers.com)                    | `INTERACTIVE_BROKERS` | Brokerage (multi-venue) | ![status](https://img.shields.io/badge/stable-green)    | [Guide](ib.md)            |
-| [MetaTrader 5](https://www.metatrader5.com)                                  | `MT5`                 | Brokerage (multi-venue) | ![status](https://img.shields.io/badge/beta-yellow)     | [Guide](mt5.md)           |
+| [Kraken](https://kraken.com)                                                 | `KRAKEN`              | Crypto Exchange (CEX)   | ![status](https://img.shields.io/badge/beta-yellow)     | [Guide](kraken.md)        |
 | [OKX](https://okx.com)                                                       | `OKX`                 | Crypto Exchange (CEX)   | ![status](https://img.shields.io/badge/stable-green)    | [Guide](okx.md)           |
 | [Polymarket](https://polymarket.com)                                         | `POLYMARKET`          | Prediction Market (DEX) | ![status](https://img.shields.io/badge/stable-green)    | [Guide](polymarket.md)    |
 | [Tardis](https://tardis.dev)                                                 | `TARDIS`              | Crypto Data Provider    | ![status](https://img.shields.io/badge/stable-green)    | [Guide](tardis.md)        |
@@ -25,6 +27,7 @@ The following integrations are currently supported:
 
 ## Status
 
+- `planned`: Planned for future development.
 - `building`: Under construction and likely not in a usable state.
 - `beta`: Completed to a minimally working state and in a 'beta' testing phase.
 - `stable`: Stabilized feature set and API, the integration has been tested by both developers and users to a reasonable level (some bugs may still remain).
@@ -51,7 +54,7 @@ The implementation of each integration aims to meet the following criteria:
 
 ## API unification
 
-All integrations must conform to NautilusTrader’s system API, requiring normalization and standardization:
+All integrations must conform to NautilusTrader's system API, requiring normalization and standardization:
 
-- Symbols should use the venue’s native symbol format unless disambiguation is required (e.g., Binance Spot vs. Binance Futures).
+- Symbols should use the venue's native symbol format unless disambiguation is required (e.g., Binance Spot vs. Binance Futures).
 - Timestamps must use UNIX epoch nanoseconds. If milliseconds are used, field/property names should explicitly end with `_ms`.

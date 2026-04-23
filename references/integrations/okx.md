@@ -7,7 +7,7 @@ execution on OKX.
 ## Overview
 
 This adapter is implemented in Rust, with optional Python bindings for ease of use in Python-based workflows.
-It does not require external OKX client libraries—the core components are compiled as a static library and linked automatically during the build.
+It does not require external OKX client libraries; the core components are compiled as a static library and linked automatically during the build.
 
 ## Examples
 
@@ -42,7 +42,7 @@ The OKX adapter includes multiple components, which can be used separately or to
 - `OKXLiveExecClientFactory`: Factory for OKX execution clients (used by the trading node builder).
 
 :::note
-Most users will simply define a configuration for a live trading node (as shown below),
+Most users will define a configuration for a live trading node (as shown below),
 and won’t need to work directly with these lower-level components.
 :::
 
@@ -154,15 +154,16 @@ use_hyphens_in_client_order_ids=False
 | Order Type          | Linear Perpetual Swap | Notes                                                         |
 |---------------------|-----------------------|---------------------------------------------------------------|
 | `MARKET`            | ✓                     | Immediate execution at market price. Supports quote quantity. |
+| `MARKET_TO_LIMIT`   | ✓                     | Market order converted to IOC limit.                          |
 | `LIMIT`             | ✓                     | Execution at specified price or better.                       |
 | `STOP_MARKET`       | ✓                     | Conditional market order (OKX algo order).                    |
 | `STOP_LIMIT`        | ✓                     | Conditional limit order (OKX algo order).                     |
 | `MARKET_IF_TOUCHED` | ✓                     | Conditional market order (OKX algo order).                    |
 | `LIMIT_IF_TOUCHED`  | ✓                     | Conditional limit order (OKX algo order).                     |
-| `TRAILING_STOP`     | -                     | *Not yet supported*.                                          |
+| `TRAILING_STOP_MARKET` | ✓                  | Trailing stop market order (OKX advance algo order).          |
 
 :::info
-**Conditional orders**: `STOP_MARKET`, `STOP_LIMIT`, `MARKET_IF_TOUCHED`, and `LIMIT_IF_TOUCHED` are implemented as OKX algo orders, providing advanced trigger capabilities with multiple price sources.
+**Conditional orders**: `STOP_MARKET`, `STOP_LIMIT`, `MARKET_IF_TOUCHED`, `LIMIT_IF_TOUCHED`, and `TRAILING_STOP_MARKET` are implemented as OKX algo orders, providing advanced trigger capabilities with multiple price sources. `TRAILING_STOP_MARKET` uses OKX's advance algo order API (`move_order_stop`) and requires the separate `cancel-advance-algos` endpoint for cancellation.
 :::
 
 ### Quantity semantics for spot margin trading
@@ -240,7 +241,7 @@ If you need GTD functionality, you must use Nautilus's strategy-managed GTD feat
 | Query positions   | ✓                     | Real-time position updates.                          |
 | Position mode     | ✓                     | Net vs Long/Short mode (see below).                  |
 | Leverage control  | ✓                     | Dynamic leverage adjustment per instrument.          |
-| Margin mode       | ✓                     | Supports cash, isolated, cross, spot_isolated modes. |
+| Margin mode       | ✓                     | Supports cash, isolated, and cross modes.            |
 
 #### Position modes
 
@@ -270,9 +271,8 @@ OKX supports four trade modes, which the adapter selects automatically based on 
 | Mode                | Used For                                   | Leverage | Borrowing | Configuration |
 |---------------------|--------------------------------------------|----------|-----------|---------------|
 | **`cash`**          | Simple spot trading                        | -        | -         | `use_spot_margin=False` (default for SPOT) |
-| **`spot_isolated`** | Spot trading with margin/leverage          | ✓        | ✓         | `use_spot_margin=True` |
-| **`isolated`**      | Derivatives trading (SWAP/FUTURES/OPTIONS) | ✓        | ✓         | `margin_mode=ISOLATED` or unset (default for derivatives) |
-| **`cross`**         | Derivatives with shared margin pool        | ✓        | ✓         | `margin_mode=CROSS` |
+| **`isolated`**      | Spot margin or derivatives (default)       | ✓        | ✓         | `use_spot_margin=True` with `margin_mode=ISOLATED` (or unset) for SPOT; default for derivatives |
+| **`cross`**         | Spot margin or derivatives, shared pool    | ✓        | ✓         | `use_spot_margin=True` with `margin_mode=CROSS` for SPOT; `margin_mode=CROSS` for derivatives |
 
 #### Configuration-based trade mode selection
 
@@ -293,11 +293,12 @@ exec_clients={
     ),
 }
 
-# SPOT trading WITH margin/leverage (uses 'spot_isolated' mode)
+# SPOT trading WITH margin/leverage (uses 'isolated' or 'cross' mode)
 exec_clients={
     OKX: OKXExecClientConfig(
         instrument_types=(OKXInstrumentType.SPOT,),
         use_spot_margin=True,  # Enable margin trading for SPOT
+        margin_mode=OKXMarginMode.ISOLATED,  # Or CROSS for shared margin
         # ... other config
     ),
 }
@@ -343,7 +344,7 @@ exec_clients={
 
 **How it works:**
 
-- **SPOT orders** → Uses `spot_isolated` mode (because `use_spot_margin=True`)
+- **SPOT orders** → Uses `cross` mode (because `use_spot_margin=True` and `margin_mode=CROSS`)
 - **SWAP orders** → Uses `cross` mode (because `margin_mode=CROSS`)
 - Each order automatically gets the correct `tdMode` based on its instrument type
 - No manual intervention required
@@ -408,6 +409,7 @@ This design ensures:
 | `STOP_LIMIT`        | Last, Mark, Index      | Limit order placement when triggered.     |
 | `MARKET_IF_TOUCHED` | Last, Mark, Index      | Market execution when price touched.      |
 | `LIMIT_IF_TOUCHED`  | Last, Mark, Index      | Limit order placement when price touched. |
+| `TRAILING_STOP_MARKET` | Last, Mark, Index   | Trailing stop with callback ratio.        |
 
 #### Trigger price types
 
@@ -441,7 +443,7 @@ The OKX adapter automatically detects and handles exchange-initiated risk manage
 :::info
 **Liquidation and ADL events are logged at WARNING level** with details including order ID, instrument, and state. Monitor your logs for these events as part of your risk management process.
 
-The adapter handles these exchange-generated orders seamlessly, generating appropriate `OrderFilled` events and updating positions accordingly. No special handling is required in your strategy code.
+The adapter handles these exchange-generated orders, generating appropriate `OrderFilled` events and updating positions accordingly. No special handling is required in your strategy code.
 :::
 
 ## Authentication
@@ -464,7 +466,27 @@ Or pass them directly in the configuration (not recommended for production).
 
 ## Demo trading
 
-OKX provides a demo trading environment for testing strategies without real funds. To use demo mode, set `is_demo=True` in your client configuration:
+OKX provides a demo trading environment for testing strategies without real funds.
+
+### Setting up a demo account
+
+1. Log into your OKX account at [okx.com](https://www.okx.com).
+2. Navigate to **Trade** → **Demo Trading**.
+3. Go to **Personal Center** within Demo Trading.
+4. Select **Demo Trading API** and create a new API key.
+5. Note down your demo API key, secret, and passphrase.
+
+You can provide demo credentials through environment variables:
+
+```bash
+export OKX_API_KEY="your_demo_api_key"
+export OKX_API_SECRET="your_demo_api_secret"
+export OKX_API_PASSPHRASE="your_demo_passphrase"
+```
+
+### Configuration
+
+Set `is_demo=True` in your client configuration:
 
 ```python
 config = TradingNodeConfig(
@@ -487,10 +509,9 @@ When demo mode is enabled:
 
 - REST API requests include the `x-simulated-trading: 1` header.
 - WebSocket connections use demo endpoints (`wspap.okx.com`).
-- The same API credentials are used as production.
 
 :::note
-You must use API keys created specifically for demo trading. Production API keys will not work in demo mode.
+Demo API keys are separate from production keys. You must create API keys specifically for demo trading through the Demo Trading interface. Production API keys will not work in demo mode.
 :::
 
 ## Rate limiting
@@ -550,7 +571,7 @@ The OKX data client provides the following configuration options:
 | `base_url_ws`                        | `None`                          | Override for the market data WebSocket endpoint. |
 | `api_key`                            | `None`      | Falls back to `OKX_API_KEY` environment variable when unset. |
 | `api_secret`                         | `None`      | Falls back to `OKX_API_SECRET` environment variable when unset. |
-| `api_passphrase`                     | `None`      | Falls back to `OKX_PASSPHRASE` environment variable when unset. |
+| `api_passphrase`                     | `None`      | Falls back to `OKX_API_PASSPHRASE` environment variable when unset. |
 | `is_demo`                            | `False`                         | Connects to the OKX demo environment when `True`. |
 | `http_timeout_secs`                  | `60`                            | Request timeout (seconds) for REST market data calls. |
 | `max_retries`                        | `3`                             | Maximum retry attempts for recoverable REST errors. |
@@ -558,6 +579,8 @@ The OKX data client provides the following configuration options:
 | `retry_delay_max_ms`                 | `10,000`                        | Upper bound for exponential backoff delay between retries. |
 | `update_instruments_interval_mins`   | `60`                            | Interval, in minutes, between background instrument refreshes. |
 | `vip_level`                          | `None`                          | Enables higher-depth order book channels when set to the matching OKX VIP tier. |
+| `http_proxy_url`                     | `None`                          | Optional HTTP proxy URL. |
+| `ws_proxy_url`                       | `None`                          | Optional WebSocket proxy URL. |
 
 The OKX execution client provides the following configuration options:
 
@@ -572,9 +595,9 @@ The OKX execution client provides the following configuration options:
 | `base_url_ws`              | `None`      | Override for the private WebSocket endpoint. |
 | `api_key`                  | `None`      | Falls back to `OKX_API_KEY` environment variable when unset. |
 | `api_secret`               | `None`      | Falls back to `OKX_API_SECRET` environment variable when unset. |
-| `api_passphrase`           | `None`      | Falls back to `OKX_PASSPHRASE` environment variable when unset. |
+| `api_passphrase`           | `None`      | Falls back to `OKX_API_PASSPHRASE` environment variable when unset. |
 | `margin_mode`              | `None`      | Margin mode for derivatives trading (`ISOLATED` or `CROSS`). Only applies to SWAP/FUTURES/OPTIONS. Defaults to `ISOLATED` if not specified. |
-| `use_spot_margin`          | `False`     | Enables margin/leverage for SPOT trading. When `True`, uses `spot_isolated` trade mode. When `False`, uses `cash` trade mode (no leverage). Only applies to SPOT instruments. |
+| `use_spot_margin`          | `False`     | Enables margin/leverage for SPOT trading. When `True`, uses `isolated` or `cross` trade mode (determined by `margin_mode`). When `False`, uses `cash` trade mode (no leverage). Only applies to SPOT instruments. |
 | `is_demo`                  | `False`     | Connects to the OKX demo trading environment. |
 | `http_timeout_secs`        | `60`        | Request timeout (seconds) for REST trading calls. |
 | `use_fills_channel`        | `False`     | Subscribes to the dedicated fills channel (VIP5+ required) for lower-latency fill reports. |
@@ -582,6 +605,9 @@ The OKX execution client provides the following configuration options:
 | `max_retries`              | `3`         | Maximum retry attempts for recoverable REST errors. |
 | `retry_delay_initial_ms`   | `1,000`     | Initial delay (milliseconds) applied before retrying a failed request. |
 | `retry_delay_max_ms`       | `10,000`    | Upper bound for the exponential backoff delay between retries. |
+| `use_spot_cash_position_reports` | `False` | Generate position reports for SPOT CASH instruments based on wallet balances. |
+| `http_proxy_url`           | `None`      | Optional HTTP proxy URL. |
+| `ws_proxy_url`             | `None`      | Optional WebSocket proxy URL. |
 
 Below is an example configuration for a live trading node using OKX data and execution clients:
 
@@ -589,7 +615,7 @@ Below is an example configuration for a live trading node using OKX data and exe
 from nautilus_trader.adapters.okx import OKX
 from nautilus_trader.adapters.okx import OKXDataClientConfig, OKXExecClientConfig
 from nautilus_trader.adapters.okx.factories import OKXLiveDataClientFactory, OKXLiveExecClientFactory
-from nautilus_trader.config import InstrumentProviderConfig, LiveExecEngineConfig, LoggingConfig, TradingNodeConfig
+from nautilus_trader.config import InstrumentProviderConfig, TradingNodeConfig
 from nautilus_trader.core.nautilus_pyo3 import OKXContractType
 from nautilus_trader.core.nautilus_pyo3 import OKXInstrumentType
 from nautilus_trader.core.nautilus_pyo3 import OKXMarginMode
@@ -628,6 +654,8 @@ node.add_data_client_factory(OKX, OKXLiveDataClientFactory)
 node.add_exec_client_factory(OKX, OKXLiveExecClientFactory)
 node.build()
 ```
+
+## Contributing
 
 :::info
 For additional features or to contribute to the OKX adapter, please see our

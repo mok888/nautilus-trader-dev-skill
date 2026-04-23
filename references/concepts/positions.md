@@ -53,7 +53,7 @@ A position closes when the net quantity becomes zero (`FLAT`). At closure:
 - The closing order ID is recorded.
 - Duration is calculated from open to close.
 - Final realized PnL is computed.
-- In `NETTING` OMS, the engine preserves closed position state through snapshots to maintain historical PnL (see [Position snapshotting](#position-snapshotting)).
+- In `NETTING` OMS, when the position later reopens, the engine snapshots the closed state to preserve historical PnL (see [Position snapshotting](#position-snapshotting)).
 
 ## Order fill aggregation
 
@@ -98,11 +98,50 @@ signed_qty = -50   # Now SHORT position
 signed_qty = 0     # Position FLAT (closed)
 ```
 
+## Position adjustments
+
+Position adjustments track quantity or PnL changes that occur outside of normal order fills,
+ensuring the position quantity accurately reflects the true net asset position. The system
+generates `PositionAdjusted` events for these scenarios.
+
+### Base currency commissions
+
+When trading spot currency pairs (e.g., BTC/USDT) or FX spot, commissions paid in the base
+currency directly affect the net quantity received or delivered:
+
+- **Opening fills**: Commission is deducted from the traded quantity. A buy of 1.0 BTC with
+  0.001 BTC commission results in a net long position of 0.999 BTC.
+- **Closing fills**: Commission is applied to `signed_qty` because it affects actual inventory.
+  Selling a 0.999 BTC LONG position with 0.000999 BTC commission leaves you SHORT 0.000999 BTC,
+  not FLAT, because you gave up 0.999999 BTC total.
+- **Flips**: Commission affects the final position size on both sides of the flip.
+
+:::note
+Base currency commissions only apply to spot currency pairs and FX spot instruments where the
+commission currency matches `instrument.base_currency`. For other instruments, commissions are
+tracked separately and do not affect position quantity.
+:::
+
+### Funding payments
+
+Funding adjustments track periodic payments for perpetual futures without affecting position
+quantity. These are logged with `quantity_change = None` and can include PnL impacts.
+
+### Adjustment tracking
+
+All adjustments are preserved in the position event history:
+
+- `position.adjustments` returns the list of all `PositionAdjusted` events.
+- Each adjustment includes type (`COMMISSION` or `FUNDING`), quantity change, and timestamps.
+- The adjustment history is cleared when positions close and reopen. When events are purged,
+  commission adjustments tied to the removed fills are regenerated while non-commission adjustments
+  (for example funding) are preserved.
+
 ## OMS types and position management
 
 NautilusTrader supports two primary OMS types that fundamentally affect how positions are tracked
 and managed. An `OmsType.UNSPECIFIED` option also exists, which defaults to the component's
-context. For comprehensive details, see the [Execution guide](execution.md#order-management-system-oms).
+context. For full details, see the [Execution guide](execution.md#order-management-system-oms).
 
 ### `NETTING`
 
@@ -121,6 +160,7 @@ In `HEDGING` mode, multiple positions can exist for the same instrument:
 - Each position has a unique position ID.
 - Positions are tracked independently.
 - No automatic netting across positions.
+- Closed positions remain in cache history but do not reopen; new fills create new positions.
 
 :::warning
 When using `HEDGING` mode, be aware of increased margin requirements as each position
@@ -199,7 +239,7 @@ incorrect reporting and analysis.
 
 ## PnL calculations
 
-NautilusTrader provides comprehensive PnL calculations that account for instrument
+NautilusTrader provides PnL calculations that account for instrument
 specifications and market conventions.
 
 ### Realized PnL
@@ -227,6 +267,8 @@ position.unrealized_pnl(last_price)  # Using last traded price
 position.unrealized_pnl(bid_price)   # Conservative for LONG positions
 position.unrealized_pnl(ask_price)   # Conservative for SHORT positions
 ```
+
+Returns `Money(0, settlement_currency)` for `FLAT` positions regardless of the price provided.
 
 ### Total PnL
 
@@ -386,8 +428,8 @@ For implementation details, see `test_position_pnl_precision_*` tests in `crates
 
 :::note
 For regulatory compliance or audit trails requiring exact decimal arithmetic, consider using `Decimal`
-types from external libraries. Very small amounts below `f64` epsilon (~1e-15) may round to zero,
-though this does not affect realistic trading scenarios with standard currency precisions.
+types from external libraries. Very small amounts below `f64` epsilon (~1e-15) may round to zero.
+This does not affect realistic trading scenarios with standard currency precisions (typically 2-9 decimals).
 :::
 
 ## Integration with other components
@@ -408,6 +450,12 @@ they operate without position linkage. The engine handles spread instruments sep
 
 Positions are central to tracking trading activity and performance in NautilusTrader. Understanding
 how positions aggregate fills, calculate PnL, and handle different OMS configurations is essential
-for building robust trading strategies. The position snapshotting mechanism ensures accurate
-historical tracking in `NETTING` mode, while the comprehensive event history supports detailed
+for building trading strategies. The position snapshotting mechanism ensures accurate
+historical tracking in `NETTING` mode, while the event history supports detailed
 analysis and reconciliation.
+
+## Related guides
+
+- [Orders](orders.md) - Orders that create and modify positions.
+- [Execution](execution.md) - Fill handling that updates positions.
+- [Portfolio](portfolio.md) - Portfolio-level position aggregation.
