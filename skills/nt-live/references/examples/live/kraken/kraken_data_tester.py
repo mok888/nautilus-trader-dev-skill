@@ -1,0 +1,1 @@
+../../../../../nt-adapters/references/examples/kraken/kraken_data_tester.py

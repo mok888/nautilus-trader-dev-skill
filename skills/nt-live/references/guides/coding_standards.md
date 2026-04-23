@@ -1,0 +1,1 @@
+../../../nt-adapters/references/guides/coding_standards.md

@@ -1,0 +1,1 @@
+../../../../../nt-adapters/references/examples/architect_ax/ax_data_tester.py

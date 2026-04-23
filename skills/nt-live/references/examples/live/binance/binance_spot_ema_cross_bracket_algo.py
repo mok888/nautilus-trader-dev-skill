@@ -1,0 +1,1 @@
+../../../../../nt-adapters/references/examples/binance/binance_spot_ema_cross_bracket_algo.py

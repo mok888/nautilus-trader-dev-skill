@@ -1,0 +1,1 @@
+../../../nt-dev/references/guides/ffi_memory.md

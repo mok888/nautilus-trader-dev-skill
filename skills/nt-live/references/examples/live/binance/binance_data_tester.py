@@ -1,0 +1,1 @@
+../../../../../nt-adapters/references/examples/binance/binance_data_tester.py

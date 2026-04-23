@@ -1,0 +1,1 @@
+../../../nt-adapters/references/concepts/live.md

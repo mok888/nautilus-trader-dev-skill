@@ -1,0 +1,1 @@
+../../../../../nt-adapters/references/examples/binance/binance_spot_testnet_exec_tester.py

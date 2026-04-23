@@ -1,0 +1,1 @@
+../../../../../nt-adapters/references/examples/hyperliquid/hyperliquid_data_tester.py

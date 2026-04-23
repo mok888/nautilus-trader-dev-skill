@@ -1,0 +1,1 @@
+../../../../../nt-adapters/references/examples/polymarket/polymarket_data_tester.py

@@ -1,0 +1,1 @@
+../../../../../nt-adapters/references/examples/bybit/bybit_request_custom_endpoint.py

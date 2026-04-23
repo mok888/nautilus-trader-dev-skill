@@ -1,0 +1,1 @@
+../../../../../nt-adapters/references/examples/bitmex/bitmex_data_tester.py

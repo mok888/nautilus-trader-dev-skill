@@ -1,0 +1,1 @@
+../../../nt-adapters/references/guides/rust.md
