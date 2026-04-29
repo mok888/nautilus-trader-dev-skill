@@ -144,6 +144,19 @@ These skills work with:
 - **Hermes Agent** — via SKILL.md + references/
 - **OpenCode** — via SKILL.md + references/
 
+## Developer Guide Sync Verification
+
+Run the static drift checks after changing references, contracts, or skills:
+
+```bash
+uv run python tools/check_dev_guide_sync.py
+uv run --with pytest pytest tests/test_dev_guide_sync.py -q
+```
+
+The checker validates required local developer-guide pages, source metadata,
+stale reference paths, and high-risk NautilusTrader invariants used by the skill
+suite.
+
 ## Source
 
 - Official docs: [nautilustrader.io/docs/latest/developer_guide](https://nautilustrader.io/docs/latest/developer_guide/)
