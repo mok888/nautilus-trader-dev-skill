@@ -15,6 +15,7 @@ tested in `test_instrument_parsing.py` and `test_order_book_events.py`.
 import sys
 import importlib.util
 from inspect import iscoroutinefunction
+from inspect import signature
 from pathlib import Path
 
 import pytest
@@ -128,6 +129,52 @@ class TestExecutionClientInterface:
     def test_wait_for_receipt_exists(self):
         assert hasattr(MyDEXExecutionClient, "_wait_for_receipt")
         assert iscoroutinefunction(MyDEXExecutionClient._wait_for_receipt)
+
+
+class TestOfficialAdapterContractNames:
+    """Checks template signatures mention current command/request object names."""
+
+    DATA_COMMAND_METHODS = {
+        "_subscribe_quote_ticks": "command",
+        "_subscribe_trade_ticks": "command",
+        "_subscribe_order_book_deltas": "command",
+        "_unsubscribe_quote_ticks": "command",
+        "_unsubscribe_trade_ticks": "command",
+        "_unsubscribe_order_book_deltas": "command",
+        "_request_bars": "request",
+    }
+
+    EXEC_COMMAND_METHODS = {
+        "_submit_order": "command",
+        "_cancel_order": "command",
+        "_cancel_all_orders": "command",
+        "_modify_order": "command",
+        "_query_order": "command",
+    }
+
+    @pytest.mark.parametrize(("method", "expected_param"), DATA_COMMAND_METHODS.items())
+    def test_data_client_uses_command_or_request_parameter(self, method, expected_param):
+        params = signature(getattr(MyDEXDataClient, method)).parameters
+        assert expected_param in params, f"{method} should accept {expected_param}"
+
+    @pytest.mark.parametrize(("method", "expected_param"), EXEC_COMMAND_METHODS.items())
+    def test_exec_client_uses_command_parameter(self, method, expected_param):
+        params = signature(getattr(MyDEXExecutionClient, method)).parameters
+        assert expected_param in params, f"{method} should accept {expected_param}"
+
+    @pytest.mark.parametrize(
+        "method",
+        [
+            "generate_order_status_report",
+            "generate_order_status_reports",
+            "generate_fill_reports",
+            "generate_position_status_reports",
+            "generate_mass_status",
+        ],
+    )
+    def test_full_execution_reconciliation_method_set_exists(self, method):
+        assert hasattr(MyDEXExecutionClient, method), f"Missing: {method}"
+        assert iscoroutinefunction(getattr(MyDEXExecutionClient, method)), f"Not async: {method}"
 
 
 class TestConfigInterface:

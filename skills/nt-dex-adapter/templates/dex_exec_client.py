@@ -142,7 +142,7 @@ class MyDEXExecutionClient(LiveExecutionClient):
 
     # ─── ORDER COMMANDS ────────────────────────────────────────────────────────
 
-    async def _submit_order(self, order: Order) -> None:
+    async def _submit_order(self, command) -> None:
         """
         Submit an order as a signed on-chain transaction.
 
@@ -159,6 +159,7 @@ class MyDEXExecutionClient(LiveExecutionClient):
         order : Order
             The Nautilus order to submit.
         """
+        order = command.order
         instrument = self._instrument_provider.find(order.instrument_id)
         if instrument is None:
             self.generate_order_rejected(
@@ -200,7 +201,7 @@ class MyDEXExecutionClient(LiveExecutionClient):
                 ts_event=self.clock.timestamp_ns(),
             )
 
-    async def _cancel_order(self, order: Order) -> None:
+    async def _cancel_order(self, command) -> None:
         """
         Cancel a pending order.
 
@@ -208,6 +209,7 @@ class MyDEXExecutionClient(LiveExecutionClient):
         Implement speed-bump cancellation (replace-by-fee) or raise NotImplementedError
         with a clear explanation.
         """
+        order = command.order
         self.log.warning(
             f"Order cancellation not supported on AMM DEX: {order.client_order_id}. "
             "AMM swaps execute atomically; cancel via replace-by-fee if tx is pending."
@@ -216,22 +218,17 @@ class MyDEXExecutionClient(LiveExecutionClient):
         # tx_hash = await self._signing_client.cancel_order(order.venue_order_id)
         # ...
 
-    async def _cancel_all_orders(
-        self, instrument_id: InstrumentId | None = None
-    ) -> None:
+    async def _cancel_all_orders(self, command) -> None:
         """Cancel all open orders (AMM: usually no-op; perp DEX: close open positions)."""
         self.log.info("cancel_all_orders: not applicable for AMM DEX")
 
-    async def _modify_order(
-        self, order: Order, quantity: Quantity | None = None, price: Price | None = None
-    ) -> None:
+    async def _modify_order(self, command) -> None:
         """Modify is not supported on most DEX venues."""
-        self.log.warning(
-            f"Order modification not supported on DEX: {order.client_order_id}"
-        )
+        self.log.warning(f"Order modification not supported on DEX: {command.client_order_id}")
 
-    async def _query_order(self, client_order_id: ClientOrderId) -> None:
+    async def _query_order(self, command) -> None:
         """Query order status by checking on-chain tx receipt."""
+        client_order_id = command.client_order_id
         tx_hash = self._pending_txs.get(client_order_id)
         if tx_hash is None:
             self.log.warning(f"No tx hash found for order: {client_order_id}")
@@ -289,6 +286,22 @@ class MyDEXExecutionClient(LiveExecutionClient):
         # if tx_hash:
         #     receipt = await self._signing_client.get_receipt(tx_hash)
         #     return self._receipt_to_order_status_report(receipt, instrument_id, client_order_id)
+        return None
+
+    async def generate_order_status_reports(self, *args, **kwargs):
+        """Generate all available order status reports for reconciliation."""
+        return []
+
+    async def generate_fill_reports(self, *args, **kwargs):
+        """Generate fill reports for reconciliation."""
+        return []
+
+    async def generate_position_status_reports(self, *args, **kwargs):
+        """Generate position status reports for reconciliation."""
+        return []
+
+    async def generate_mass_status(self, *args, **kwargs):
+        """Generate mass status for reconciliation."""
         return None
 
     # ─── TX RECEIPT HANDLER ────────────────────────────────────────────────────

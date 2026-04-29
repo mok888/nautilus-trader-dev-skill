@@ -135,13 +135,14 @@ class MyDEXDataClient(LiveMarketDataClient):
 
     # ─── SUBSCRIPTIONS ─────────────────────────────────────────────────────────
 
-    async def _subscribe_quote_ticks(self, instrument_id: InstrumentId) -> None:
+    async def _subscribe_quote_ticks(self, command) -> None:
         """
         Subscribe to quote ticks for a pool.
 
         Starts a polling loop that fetches pool reserves at the configured
         interval and synthesises QuoteTick objects.
         """
+        instrument_id = command.instrument_id
         if instrument_id in self._poll_tasks:
             return  # Already subscribed
 
@@ -150,58 +151,62 @@ class MyDEXDataClient(LiveMarketDataClient):
         task = asyncio.ensure_future(self._poll_pool_state(instrument_id))
         self._poll_tasks[instrument_id] = task
 
-    async def _subscribe_trade_ticks(self, instrument_id: InstrumentId) -> None:
+    async def _subscribe_trade_ticks(self, command) -> None:
         """
         Subscribe to on-chain swap events (trade ticks).
 
         For EVM chains, subscribe to the Swap event log from the pool contract.
         These become TradeTick objects in Nautilus.
         """
+        instrument_id = command.instrument_id
         self.log.info(f"Subscribing to trade ticks: {instrument_id}")
         # If WS available: subscribe to Swap event
         # if self._ws_client:
         #     await self._ws_client.subscribe_swap_events(pool_address, self._on_swap_event)
 
-    async def _subscribe_order_book_deltas(self, instrument_id: InstrumentId) -> None:
+    async def _subscribe_order_book_deltas(self, command) -> None:
         """
         Subscribe to order book deltas.
 
         For AMM DEX: not applicable (AMM has no discrete order book).
         For on-chain CLOB DEX: subscribe to Maker/Taker events.
         """
+        instrument_id = command.instrument_id
         self.log.info(
             f"OrderBookDelta subscription: {instrument_id} (AMM: derived from pool)"
         )
         # AMM implementation: synthesise L1 snapshot from pool reserves
         # CLOB implementation: subscribe to on-chain order events
 
-    async def _unsubscribe_quote_ticks(self, instrument_id: InstrumentId) -> None:
+    async def _unsubscribe_quote_ticks(self, command) -> None:
+        instrument_id = command.instrument_id
         task = self._poll_tasks.pop(instrument_id, None)
         if task:
             task.cancel()
 
-    async def _unsubscribe_trade_ticks(self, instrument_id: InstrumentId) -> None:
+    async def _unsubscribe_trade_ticks(self, command) -> None:
+        instrument_id = command.instrument_id
         self.log.info(f"Unsubscribed trade ticks: {instrument_id}")
 
-    async def _unsubscribe_order_book_deltas(self, instrument_id: InstrumentId) -> None:
+    async def _unsubscribe_order_book_deltas(self, command) -> None:
+        instrument_id = command.instrument_id
         self.log.info(f"Unsubscribed order book: {instrument_id}")
 
-    async def _request_bars(
-        self,
-        bar_type: BarType,
-        limit: int,
-        correlation_id: UUID4,
-        start: int | None = None,
-        end: int | None = None,
-    ) -> None:
+    async def _request_bars(self, request) -> None:
         """
         Request historical bars.
 
         For DEX: fetch historical swap events from chain or subgraph,
         aggregate into OHLCV bars.
         """
-        # bars = await self._client.fetch_historical_bars(bar_type, limit, start, end)
-        # self._handle_bars(bars, bar_type, correlation_id)
+        bar_type = request.bar_type
+        # bars = await self._client.fetch_historical_bars(
+        #     request.bar_type,
+        #     request.limit,
+        #     request.start,
+        #     request.end,
+        # )
+        # self._handle_bars(bars, request.bar_type, request.correlation_id)
         self.log.warning(f"Historical bar request not yet implemented for {bar_type}")
 
     # ─── POLLING LOOP ──────────────────────────────────────────────────────────
