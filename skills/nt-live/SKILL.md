@@ -32,7 +32,21 @@ NautilusTrader **live infrastructure domain** — live trading nodes, system ker
 
 ## Python Usage
 
+## Live runtime contract
+
+Read `references/developer_guide/contracts/live_runtime_contract.md` before
+choosing a live runtime.
+
+- Prefer `nautilus_trader.live.LiveNode` for new Rust-backed PyO3 adapter and v2
+  live-runtime examples.
+- Treat `nautilus_trader.live.node.TradingNode` examples as legacy v1/Cython or
+  integration-specific unless the current official adapter docs say otherwise.
+- Keep reconciliation enabled for production execution clients unless a venue
+  limitation is documented and reviewed.
+
 ### TradingNode Configuration
+
+Legacy v1/Cython-oriented example.
 
 ```python
 from nautilus_trader.live.node import TradingNode
@@ -61,6 +75,8 @@ node = TradingNode(config=config)
 ```
 
 ### Node Lifecycle
+
+Legacy v1/Cython-oriented example.
 
 ```python
 # Build node
@@ -331,8 +347,8 @@ impl MyInfraComponent {
 - Register in `crates/pyo3/src/lib.rs`
 - GIL management: use `Python::attach()` for callback forwarding
 - Tokio integration: use `tokio::runtime::Runtime` for async Rust code
-- See `references/guides/ffi.md` for FFI patterns
-- See `references/guides/rust.md` for Rust coding standards
+- See `references/developer_guide/ffi.md` for FFI patterns
+- See `references/developer_guide/rust.md` for Rust coding standards
 
 ## Key Conventions
 
@@ -364,7 +380,7 @@ Components follow strict state machine: `INITIALIZED → RUNNING → STOPPED →
 
 ### Coding Standards
 
-See `references/guides/coding_standards.md` for project-wide conventions including:
+See `references/developer_guide/coding_standards.md` for project-wide conventions including:
 
 ### Production Readiness Checklist
 
@@ -384,5 +400,6 @@ See `references/guides/coding_standards.md` for project-wide conventions includi
 
 - `references/concepts/` — architecture, cache, logging, live, overview, rust
 - `references/api/` — system, core, common, config, live
-- `references/guides/` — coding standards, FFI, Python conventions, Rust conventions, environment setup, run_rust_live_trading
+- `references/developer_guide/` — coding standards, FFI, Python conventions, Rust conventions, environment setup
+- `references/developer_guide/contracts/live_runtime_contract.md` — LiveNode versus TradingNode guidance
 - `references/examples/live/` — per-adapter live examples (Binance, Bybit, Databento, etc.)

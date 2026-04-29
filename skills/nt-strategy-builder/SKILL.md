@@ -26,6 +26,13 @@ Complements the existing skills:
 
 ## Decision Tree: Which Execution Mode?
 
+### Live runtime selection
+
+For new Rust-backed PyO3 adapters, start from the `LiveNode` path described in
+`references/developer_guide/contracts/live_runtime_contract.md`. Use
+`TradingNode` only for legacy v1/Cython integrations or existing examples that
+are explicitly still built on that runtime.
+
 ```
 Are you using live market data?
 │
