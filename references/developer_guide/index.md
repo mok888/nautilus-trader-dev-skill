@@ -35,12 +35,24 @@ types and how these map to their corresponding `PyObject` types.
 
 - [Environment Setup](environment_setup.md)
 - [Coding Standards](coding_standards.md)
+- [Design Principles](design_principles.md)
 - [Cython](cython.md)
 - [Rust](rust.md)
 - [Testing](testing.md)
+- [Data Testing Spec](spec_data_testing.md)
+- [Execution Testing Spec](spec_exec_testing.md)
+- [Test Datasets](test_datasets.md)
 - [Docs Style Guide](docs.md)
 - [Release Notes Guide](releases.md)
 - [Adapters](adapters.md)
 - [Benchmarking](benchmarking.md)
 - [Packaged Data](packaged_data.md)
 - [FFI Memory Contract](ffi.md)
+
+## Local Contracts
+
+- [Environment Tooling Contract](contracts/environment_tooling.md)
+- [Testing Policy Contract](contracts/testing_policy.md)
+- [Adapter Contract](contracts/adapter_contract.md)
+- [Live Runtime Contract](contracts/live_runtime_contract.md)
+- [Design Principles Contract](contracts/design_principles.md)
