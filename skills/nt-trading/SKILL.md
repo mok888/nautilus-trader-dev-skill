@@ -421,12 +421,12 @@ Positions transition: `OPENING → OPEN → CLOSING → CLOSED`. A position's `s
 - Use `BacktestEngine` for strategy unit tests
 - Verify order submission counts, fill events, position states
 - Test edge cases: partial fills, rejects, disconnections
-- See `references/guides/testing.md` for patterns
+- See `references/developer_guide/testing.md` for patterns
 
 ## References
 
 - `references/concepts/` — strategies, actors, execution, orders, positions, portfolio, rust
 - `references/api/` — trading, execution, risk, portfolio, accounting, orders, position, events
-- `references/guides/` — testing patterns, write_rust_strategy, write_rust_actor
+- `references/developer_guide/` — testing patterns, write_rust_strategy, write_rust_actor
 - `references/examples/` — backtest examples (EMA cross, actor data/signals, msgbus), Rust strategies (ema_cross, grid_mm), Rust actors (imbalance)
 - `templates/` — strategy.py, actor.py, exec_algorithm.py

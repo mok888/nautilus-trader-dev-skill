@@ -363,7 +363,7 @@ The matching engine core lives in `crates/execution/src/matching_core/`. Extend 
 - Use `BacktestEngine` timing for consistent benchmarks
 - Profile with `py-spy` or `cProfile` for hotspot identification
 - Compare against baseline runs with same data
-- See `references/guides/benchmarking.md` for detailed practices
+- See `references/developer_guide/benchmarking.md` for detailed practices
 
 ### Backtest Reproducibility
 
@@ -381,6 +381,6 @@ The matching engine core lives in `crates/execution/src/matching_core/`. Extend 
 
 - `references/concepts/` — backtesting, order book
 - `references/api/` — backtest API
-- `references/guides/` — benchmarking practices, benchmarking review checklist, run_rust_backtest
+- `references/developer_guide/` — benchmarking practices, benchmarking review checklist, run_rust_backtest
 - `references/examples/` — clock timer, portfolio, cache usage, Rust backtests (engine_ema_cross, node_ema_cross), model configs
 - `templates/` — fill_model.py

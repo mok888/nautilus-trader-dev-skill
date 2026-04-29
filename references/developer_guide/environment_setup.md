@@ -40,7 +40,7 @@ make install-debug
 2. Set up the pre-commit hook which will then run automatically at commit:
 
 ```bash
-pre-commit install
+prek install
 ```
 
 Before opening a pull-request run the formatting and lint suite locally so that CI passes on the

@@ -220,5 +220,5 @@ cache_config = CacheConfig(
 
 - `references/concepts/` — data, cache
 - `references/api/` — data, persistence, serialization, cache
-- `references/guides/` — test datasets, Databento integration, Tardis integration
+- `references/developer_guide/` — test datasets, Databento integration, Tardis integration
 - `references/examples/` — data catalog usage
