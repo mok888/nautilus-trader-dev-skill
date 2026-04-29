@@ -31,6 +31,21 @@ The complete NautilusTrader testing framework:
 
 ## Test Categories
 
+## Current testing policy contract
+
+Read `references/developer_guide/contracts/testing_policy.md` before designing
+adapter, live-runtime, or PyO3 tests.
+
+Required testing rules:
+
+- Choose the smallest mechanism that proves the production behavior.
+- Use DataTester evidence for compatible data adapter behavior.
+- Use ExecTester evidence for compatible execution adapter behavior.
+- Do not treat method presence as production readiness.
+- Isolate PyO3 panic or abort paths in subprocess-style tests when the failure
+  can terminate the interpreter.
+- Keep unit tests deterministic and do not implicitly download datasets.
+
 NautilusTrader's test suite covers seven categories:
 
 | Category | Scope | Typical Location |
@@ -193,7 +208,7 @@ config = DataTesterConfig(
 4. Checks for gaps, stale data, or malformed messages
 5. Reports pass/fail per subscription type
 
-**Full spec**: See `references/guides/spec_data_testing.md` for per-adapter test configurations.
+**Full spec**: See `references/developer_guide/spec_data_testing.md` for per-adapter test configurations.
 
 ## Execution Testing Spec
 
@@ -251,7 +266,7 @@ config = ExecTesterConfig(
 4. Validates fills, rejects, and cancellations against expected behavior
 5. Reports pass/fail per order type
 
-**Full spec**: See `references/guides/spec_exec_testing.md` for per-adapter execution test configurations.
+**Full spec**: See `references/developer_guide/spec_exec_testing.md` for per-adapter execution test configurations.
 
 ## Test Datasets
 
@@ -333,7 +348,8 @@ make format && make pre-commit
 
 ## References
 
-- `references/guides/testing.md` — Full testing guide (16KB)
-- `references/guides/spec_data_testing.md` — Data testing spec per adapter (38KB)
-- `references/guides/spec_exec_testing.md` — Execution testing spec per adapter (91KB)
-- `references/guides/test_datasets.md` — Dataset curation standards (15KB)
+- `references/developer_guide/testing.md` — Full testing guide
+- `references/developer_guide/spec_data_testing.md` — Data testing spec per adapter
+- `references/developer_guide/spec_exec_testing.md` — Execution testing spec per adapter
+- `references/developer_guide/test_datasets.md` — Dataset curation standards
+- `references/developer_guide/contracts/testing_policy.md` — Current testing policy contract

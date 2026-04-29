@@ -38,7 +38,7 @@ NautilusTrader **developer workflow** — environment setup, coding standards, t
 | **uv** | Python venv & dependency management | [docs.astral.sh/uv](https://docs.astral.sh/uv) |
 | **Rust** | Core platform implementation | [rust-lang.org/tools/install](https://www.rust-lang.org/tools/install) |
 | **Cap'n Proto** | Serialization schema compilation | Version pinned in `capnp-version` file |
-| **pre-commit** | Automated formatting/linting at commit | `pre-commit install` |
+| **prek** | Automated formatting/linting at commit | `make install-tools`, then `prek install` |
 
 ### Initial Setup
 
@@ -50,9 +50,28 @@ uv sync --active --all-groups --all-extras
 # 2. Debug build (faster iteration)
 make install-debug
 
-# 3. Set up pre-commit hooks
-pre-commit install
+# 3. Set up hooks with current official tooling
+make install-tools
+prek install
 ```
+
+### Environment setup contract
+
+Follow `references/developer_guide/contracts/environment_tooling.md` before
+changing setup instructions.
+
+For current NautilusTrader core development:
+
+```bash
+uv sync --active --all-groups --all-extras
+make install-tools
+prek install
+```
+
+Use `prek install` for hook installation. Keep official make target names that
+still include `pre-commit`, but do not present `pre-commit install` as the
+current default unless the target repository explicitly remains on legacy
+pre-commit tooling.
 
 ### Environment Variables (Linux/macOS)
 
@@ -102,7 +121,7 @@ After any changes to `.rs`, `.pyx`, or `.pxd` files, rebuild with `make build` o
 
 **VS Code (rust-analyzer)**: Set `VIRTUAL_ENV`, `CC=clang`, `CXX=clang++` in `rust-analyzer.cargo.extraEnv`, `check.extraEnv`, and `runnables.extraEnv`. Enable `features = "all"` and `testExplorer = true`.
 
-**Faster builds (optional)**: Use cranelift backend on nightly toolchain. See `references/guides/environment_setup.md` for the Cargo.toml patch. **Do not commit** the cranelift patch.
+**Faster builds (optional)**: Use cranelift backend on nightly toolchain. See `references/developer_guide/environment_setup.md` for the Cargo.toml patch. **Do not commit** the cranelift patch.
 
 ### Dependency Management
 
@@ -249,7 +268,7 @@ make cargo-ci-benches                                  # CI benches
 
 ### Data Type Testing
 
-New data types need tests at all layers: DataEngine, DataActor (Rust), PyO3 dispatch, Python Actor, Backtest client, Adapter spec. See `references/guides/testing.md` for the full test layer matrix.
+New data types need tests at all layers: DataEngine, DataActor (Rust), PyO3 dispatch, Python Actor, Backtest client, Adapter spec. See `references/developer_guide/testing.md` and `references/developer_guide/contracts/testing_policy.md` for the full test layer matrix.
 
 ## FFI & Memory
 
@@ -371,13 +390,14 @@ Start items with: "Added", "Removed", "Renamed", "Changed", "Fixed", "Implemente
 
 ## References
 
-- `references/guides/environment_setup.md` — Full environment setup guide
-- `references/guides/coding_standards.md` — Formatting, comments, commit messages
-- `references/guides/rust_conventions.md` — Rust conventions summary (Cargo, features, async, attrs)
-- `references/guides/python_conventions.md` — Python style, type hints, docstrings
-- `references/guides/testing.md` — Test categories, running, style, data type test matrix
-- `references/guides/benchmarking.md` — Criterion, iai, flamegraph, directory layout
-- `references/guides/ffi_memory.md` — CVec lifecycle, PyCapsule, abort_on_panic, ownership
-- `references/guides/test_datasets.md` — Dataset categories, metadata, curation workflow
-- `references/guides/releases.md` — Branch model, versioning, checklist, release notes
-- `references/guides/docs_style.md` — Docs types, admonitions, MDX components, style guide
+- `references/developer_guide/environment_setup.md` — Full environment setup guide
+- `references/developer_guide/coding_standards.md` — Formatting, comments, commit messages
+- `references/developer_guide/rust.md` — Rust conventions summary (Cargo, features, async, attrs)
+- `references/developer_guide/python.md` — Python style, type hints, docstrings
+- `references/developer_guide/testing.md` — Test categories, running, style, data type test matrix
+- `references/developer_guide/benchmarking.md` — Criterion, iai, flamegraph, directory layout
+- `references/developer_guide/ffi.md` — CVec lifecycle, PyCapsule, abort_on_panic, ownership
+- `references/developer_guide/test_datasets.md` — Dataset categories, metadata, curation workflow
+- `references/developer_guide/releases.md` — Branch model, versioning, checklist, release notes
+- `references/developer_guide/docs_style.md` — Docs types, admonitions, MDX components, style guide
+- `references/developer_guide/contracts/environment_tooling.md` — Current tooling contract
