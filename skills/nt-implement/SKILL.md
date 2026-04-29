@@ -69,6 +69,19 @@ When implementing adapters, enforce these constraints across all templates and g
 - When implementing custom simulation/analysis models
 - When implementing performance-critical code in Rust with Python bindings
 
+### Contract-aware implementation checkpoint
+
+Before writing implementation code, check the relevant contract:
+
+- environment/tooling: `references/developer_guide/contracts/environment_tooling.md`
+- testing: `references/developer_guide/contracts/testing_policy.md`
+- adapters: `references/developer_guide/contracts/adapter_contract.md`
+- live runtime: `references/developer_guide/contracts/live_runtime_contract.md`
+- design principles: `references/developer_guide/contracts/design_principles.md`
+
+Do not mutate published Nautilus messages in place; preserve message immutability
+unless an official source explicitly documents a local mutable builder pattern.
+
 ## Implementation Workflow
 
 1. Start from architecture document

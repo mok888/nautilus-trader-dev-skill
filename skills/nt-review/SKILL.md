@@ -57,6 +57,19 @@ EvoMap-specific review severity:
 
 ## Review Dimensions
 
+### Developer guide sync review gates
+
+Block production-readiness claims unless review evidence covers:
+
+- message immutability across published events, commands, requests, and
+  responses;
+- DataTester or equivalent evidence for claimed data adapter behavior;
+- ExecTester or equivalent evidence for claimed execution adapter behavior;
+- complete adapter reconciliation reports for claimed live execution scope;
+- `LiveNode` use for new Rust-backed PyO3 adapter paths, or an explicit legacy
+  label for `TradingNode` examples;
+- environment setup that uses current `prek`/`make install-tools` guidance.
+
 ### 1. Nautilus Conventions
 
 #### Assurance-Driven Engineering (2026 Standard)

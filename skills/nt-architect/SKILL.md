@@ -39,6 +39,13 @@ If the system integrates with `evomap.ai`, model it as an **external advisory si
 
 ## Architecture Design Process
 
+### Design principles invariant
+
+Preserve message immutability across actor, strategy, adapter, cache, and
+message-bus boundaries. Design components to publish new messages or state
+transitions rather than mutating events, commands, requests, or responses after
+publication. See `references/developer_guide/contracts/design_principles.md`.
+
 ### Phase 1: Intake Research Outputs
 
 Identify and categorize what your research produced:
