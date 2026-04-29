@@ -13,26 +13,26 @@ Once built, your adapter is consumed by the `nt-strategy-builder` skill's `dex_v
 
 **Canonical CeFi reference adapters**: OKX, BitMEX, Bybit — study their Python layer and Rust core before customising.
 
-## Adapter Canonical Contract (2026 Guide Alignment)
+## Adapter canonical contract
 
-Treat these as non-negotiable for custom adapters:
+Read `references/developer_guide/contracts/adapter_contract.md` and
+`references/developer_guide/contracts/testing_policy.md` before claiming a DEX
+adapter is ready.
 
-- **Phase order is fixed**: 1) Rust infra, 2) instruments, 3) market data, 4) execution + reconciliation, 5) advanced features, 6) config + factories, 7) tests + docs.
-- **Python layer contracts are mandatory**:
-  - `InstrumentProvider`: `load_all_async`, `load_ids_async`, `load_async`
-  - `LiveDataClient`: `_connect`, `_disconnect`, `_subscribe`, `_unsubscribe`, `_request`
-  - `LiveExecutionClient`: order operations plus report/reconciliation methods (`generate_order_status_report(s)`, `generate_fill_reports`, `generate_position_status_reports`, `generate_mass_status`)
-- **Runtime and FFI invariants**:
-  - Use `get_runtime().spawn()` in adapter Rust tasks (do not use `tokio::spawn()` from Python-driven flows)
-  - Do not use `Arc<PyObject>` in adapter bindings; use `PyObject` and clone helpers
-  - Keep websocket command/event flow lock-free in hot paths
-- **Factory and config standards**:
-  - Implement adapter data/exec factory classes with static `create(loop, name, config, msgbus, cache, clock)`
-  - Keep config defaults and env-based credential resolution explicit
-- **Testing doctrine**:
-  - Use real payload fixtures from docs/live captures (no fabricated payload schemas)
-  - Prefer condition-based async waiting over arbitrary sleeps
-  - Cover Rust unit + integration and Python integration (`data`, `execution`, `providers`, `factories`)
+DEX adapter readiness requires:
+
+- provider/data/execution methods aligned to current Nautilus command/request
+  object signatures;
+- `InstrumentProvider.load_all_async()` implemented, with targeted load methods
+  overridden only for DEX-specific semantics or efficiency;
+- data connect lifecycle: bootstrap instruments, cache instruments, emit
+  instruments, prepare WebSocket cache, then connect subscriptions;
+- execution connect lifecycle: initialize instruments, connect private stream,
+  subscribe, refresh account state, wait for account registration, then mark
+  connected;
+- reconciliation coverage for order status reports, fill reports, position
+  status reports, and mass status where supported by the venue;
+- DataTester and ExecTester or equivalent acceptance evidence.
 
 ## When to Use
 

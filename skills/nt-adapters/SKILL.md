@@ -33,6 +33,22 @@ NautilusTrader **adapter domain** — exchange/data provider integrations follow
 
 ## Adapter Architecture
 
+## Current adapter contract
+
+Read `references/developer_guide/contracts/adapter_contract.md` before creating
+or reviewing adapter code.
+
+Current high-risk rules:
+
+- Use `nautilus_network::http::HttpClient` in Rust HTTP examples.
+- Use `get_runtime().spawn()` for Python-runtime-sensitive async Rust paths;
+  do not teach `tokio::spawn()` as the default from Python-driven adapter code.
+- Keep Python data and execution client methods aligned with current
+  command/request object signatures.
+- Treat `InstrumentProvider.load_all_async()` as the required v1.224-era method;
+  override targeted methods only for venue-specific semantics or efficiency.
+- Require data tester and execution tester evidence for adapter readiness.
+
 Adapters follow a layered architecture:
 
 - **Rust core** — networking clients, parsing, rate limiting, request signing
@@ -242,8 +258,10 @@ Follow the implementation sequence above. Key patterns:
 
 **HTTP Client**:
 ```rust
+use nautilus_network::http::HttpClient as NautilusHttpClient;
+
 pub struct HttpClient {
-    client: reqwest::Client,
+    client: NautilusHttpClient,
     credential: Credential,
     rate_limit: RateLimit,
 }
@@ -372,12 +390,12 @@ pub struct SubscriptionState {
 ### Task Management
 
 ```rust
-// Use spawn_task for async work — never block_on
-tokio::spawn(async move { ... });
+// Use the Nautilus runtime for Python-driven adapter paths — never block_on
+get_runtime().spawn(async move { ... });
 
 // Graceful shutdown via CancellationToken
 let token = CancellationToken::new();
-tokio::spawn(async move {
+get_runtime().spawn(async move {
     tokio::select! {
         _ = work() => {},
         _ = token.cancelled() => {},
@@ -385,7 +403,9 @@ tokio::spawn(async move {
 });
 ```
 
-**Critical**: Never use `block_on` in trait method implementations.
+**Critical**: Never use `block_on` in trait method implementations. Do not teach
+`tokio::spawn()` as the default from Python-driven adapter code; use
+`get_runtime().spawn()` so task ownership follows Nautilus runtime expectations.
 
 ## Key Conventions
 
@@ -446,7 +466,8 @@ Rust adapter code must include:
 
 ## References
 
-- `references/guides/official_adapter_spec.md` — Full official adapter development spec (118KB)
+- `references/developer_guide/adapters.md` — Official adapter development guide
+- `references/developer_guide/contracts/adapter_contract.md` — Current adapter contract
 - `references/api/` — Per-adapter API documentation
 - `references/examples/` — Per-adapter runnable examples
 - `references/integrations/` — Per-adapter integration docs
