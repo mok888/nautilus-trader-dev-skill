@@ -10,6 +10,11 @@
 
 AI agent skills repository for building production-grade trading systems with NautilusTrader. Contains specialized skills covering architecture → implementation → integration → execution → review workflow, plus reference documentation and templates.
 
+Current developer-guide sync status is verified by `tools/check_dev_guide_sync.py`.
+Local references summarize official pages and include source metadata; skills use
+canonical contracts under `references/developer_guide/contracts/` for
+agent-actionable rules.
+
 ## STRUCTURE
 
 ```

@@ -105,21 +105,26 @@ These skills encode NautilusTrader best practices, correct patterns, and structu
 
 ## Official Developer Guide Coverage
 
+Current developer-guide sync status is verified by `tools/check_dev_guide_sync.py`.
+Local references summarize official pages and include source metadata; skills use
+canonical contracts under `references/developer_guide/contracts/` for
+agent-actionable rules.
+
 | Dev Guide Section | Skill | Status |
 |---|---|---|
-| Environment Setup | `nt-dev` | ✅ Full reference |
-| Coding Standards | `nt-dev` | ✅ Full reference |
+| Environment Setup | `nt-dev` | ✅ Reference + tooling contract |
+| Coding Standards | `nt-dev` | ✅ Reference summary |
 | Design Principles | `nt-architect` | ✅ Workflow skill |
-| Rust | `nt-dev` | ✅ Full reference |
-| Python | `nt-dev` | ✅ Full reference |
-| Testing | `nt-testing` | ✅ Full reference + specs |
-| Spec Data Testing | `nt-testing` | ✅ 877-line spec |
-| Spec Exec Testing | `nt-testing` | ✅ 1867-line spec |
-| Test Datasets | `nt-testing` | ✅ Full reference |
-| Docs Style | `nt-dev` | ✅ Full reference |
-| Releases | `nt-dev` | ✅ Full reference |
+| Rust | `nt-dev` | ✅ Reference summary |
+| Python | `nt-dev` | ✅ Reference summary |
+| Testing | `nt-testing` | ✅ Reference + policy contract |
+| Spec Data Testing | `nt-testing` | ✅ Local summary + source metadata |
+| Spec Exec Testing | `nt-testing` | ✅ Local summary + source metadata |
+| Test Datasets | `nt-testing` | ✅ Local summary + source metadata |
+| Docs Style | `nt-dev` | ✅ Reference summary |
+| Releases | `nt-dev` | ✅ Reference summary |
 | Adapters | `nt-adapters` + `nt-dex-adapter` | ✅ CeFi + DEX |
-| Benchmarking | `nt-dev` | ✅ Full reference |
+| Benchmarking | `nt-dev` | ✅ Reference summary |
 | FFI | `nt-dev` | ✅ Memory contract spec |
 
 ## Reference Architecture
