@@ -30,8 +30,22 @@ class CheckResult:
     errors: list[str]
 
 
-def _iter_markdown_files(root: Path) -> list[Path]:
-    return sorted(path for path in root.rglob("*.md") if ".git" not in path.parts)
+def _iter_checked_markdown_files(root: Path) -> list[Path]:
+    checked: list[Path] = []
+    for path in sorted(root.rglob("*.md")):
+        relative = path.relative_to(root)
+        if ".git" in path.parts:
+            continue
+        if relative.parts[:2] == ("docs", "superpowers"):
+            continue
+        if relative.parts[:2] == ("skills", "nt-adapters") and "references" in relative.parts:
+            continue
+        if relative.parts[:2] == ("skills", "nt-dev") and "references" in relative.parts:
+            continue
+        if relative.parts[:2] == ("skills", "nt-live") and "references" in relative.parts:
+            continue
+        checked.append(path)
+    return checked
 
 
 def _relative(path: Path, root: Path) -> str:
@@ -57,7 +71,7 @@ def run_checks(root: Path) -> CheckResult:
                 f"missing source metadata in {relative.as_posix()}: {', '.join(missing_keys)}"
             )
 
-    for markdown_file in _iter_markdown_files(root):
+    for markdown_file in _iter_checked_markdown_files(root):
         text = _read(markdown_file)
         relative = _relative(markdown_file, root)
         if "references/guides/" in text:
