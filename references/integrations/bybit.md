@@ -573,6 +573,10 @@ The product types for each client must be specified in the configurations.
 | `position_mode`                  | `None` | Mapping of `BybitSymbol` to position mode (one-way vs hedge). |
 | `margin_mode`                    | `None` | Margin mode setting for the account. |
 
+> **Runtime note:** This is a Python live/integration-specific `TradingNode`
+> example. Use `LiveNode` for Rust v2 / Rust-backed live-node work where
+> applicable.
+
 The most common use case is to configure a live `TradingNode` to include Bybit
 data and execution clients. To achieve this, add a `BYBIT` section to your client
 configuration(s):

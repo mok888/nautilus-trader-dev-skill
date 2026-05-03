@@ -544,6 +544,10 @@ each node to avoid interference:
 
 This prevents warning spam and ensures each node processes only its own orders and fills.
 
+> **Runtime note:** This is a Python live/integration-specific `TradingNode`
+> example. Use `LiveNode` for Rust v2 / Rust-backed live-node work where
+> applicable.
+
 Here is a minimal example showing how to configure a live `TradingNode` with Betfair clients:
 
 ```python

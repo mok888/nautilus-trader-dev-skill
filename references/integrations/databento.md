@@ -669,6 +669,10 @@ which makes historical instrument definitions and data requests.
 
 ## Configuration
 
+> **Runtime note:** This is a Python live/integration-specific `TradingNode`
+> example. Use `LiveNode` for Rust v2 / Rust-backed live-node work where
+> applicable.
+
 The most common use case is to configure a live `TradingNode` to include a
 Databento data client. To achieve this, add a `DATABENTO` section to your client
 configuration(s):

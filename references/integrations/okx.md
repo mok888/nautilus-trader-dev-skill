@@ -609,6 +609,10 @@ The OKX execution client provides the following configuration options:
 | `http_proxy_url`           | `None`      | Optional HTTP proxy URL. |
 | `ws_proxy_url`             | `None`      | Optional WebSocket proxy URL. |
 
+> **Runtime note:** This is a Python live/integration-specific `TradingNode`
+> example. Use `LiveNode` for Rust v2 / Rust-backed live-node work where
+> applicable.
+
 Below is an example configuration for a live trading node using OKX data and execution clients:
 
 ```python

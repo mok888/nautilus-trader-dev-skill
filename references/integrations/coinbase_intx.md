@@ -304,6 +304,10 @@ strat_config = TOBQuoterConfig(
 )
 ```
 
+> **Runtime note:** This is a Python live/integration-specific `TradingNode`
+> example. Use `LiveNode` for Rust v2 / Rust-backed live-node work where
+> applicable.
+
 Then, create a `TradingNode` and add the client factories:
 
 ```python

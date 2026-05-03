@@ -447,6 +447,10 @@ For the latest rate limits, query `/api/v3/exchangeInfo` (Spot) or `/fapi/v1/exc
 | `futures_margin_types`               | `None`    | Mapping of `BinanceSymbol` to futures margin type (isolated/cross). |
 | `log_rejected_due_post_only_as_warning` | `True` | Log post-only rejections as warnings when `True`; otherwise as errors. |
 
+> **Runtime note:** This is a Python live/integration-specific `TradingNode`
+> example. Use `LiveNode` for Rust v2 / Rust-backed live-node work where
+> applicable.
+
 The most common use case is to configure a live `TradingNode` to include Binance
 data and execution clients. To achieve this, add a `BINANCE` section to your client
 configuration(s):

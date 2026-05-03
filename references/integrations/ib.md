@@ -846,6 +846,10 @@ Interactive Brokers enforces pacing limits; excessive historical-data or order r
 
 ## Live trading
 
+> **Runtime note:** This is a Python live/integration-specific `TradingNode`
+> example. Use `LiveNode` for Rust v2 / Rust-backed live-node work where
+> applicable.
+
 Live trading with Interactive Brokers requires setting up a `TradingNode` that incorporates both `InteractiveBrokersDataClient` and `InteractiveBrokersExecutionClient`. These clients depend on the `InteractiveBrokersInstrumentProvider` for instrument management.
 
 ### Architecture overview

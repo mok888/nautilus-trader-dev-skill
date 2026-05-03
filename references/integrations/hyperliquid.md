@@ -431,6 +431,10 @@ backoff (full jitter) on rate limit (429) and server error (5xx) responses.
 
 ### Configuration example
 
+> **Runtime note:** This is a Python live/integration-specific `TradingNode`
+> example. Use `LiveNode` for Rust v2 / Rust-backed live-node work where
+> applicable.
+
 ```python
 from nautilus_trader.adapters.hyperliquid import HYPERLIQUID
 from nautilus_trader.adapters.hyperliquid import HyperliquidDataClientConfig

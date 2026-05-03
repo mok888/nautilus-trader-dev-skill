@@ -655,6 +655,10 @@ clients support environment variable fallbacks for credentials and network-speci
 
 ### Basic setup
 
+> **Runtime note:** This is a Python live/integration-specific `TradingNode`
+> example. Use `LiveNode` for Rust v2 / Rust-backed live-node work where
+> applicable.
+
 Configure a live `TradingNode` to include dYdX data and execution clients:
 
 ```python
