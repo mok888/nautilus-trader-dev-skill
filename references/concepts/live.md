@@ -10,6 +10,12 @@ node operations, execution reconciliation, and the differences between backtesti
 
 This guide provides an overview of the key aspects of live trading.
 
+:::note[Live runtime boundary]
+Python live-trading examples in this guide use `TradingNode`. Rust v2 /
+Rust-backed live-node work should use `LiveNode` where the official Rust live
+path applies.
+:::
+
 :::danger[Jupyter notebooks not recommended for live trading]
 Running live trading nodes in Jupyter notebooks is **not recommended** due to event loop conflicts and operational risks:
 

@@ -2,7 +2,11 @@
 
 ## Goal
 
-Deploy a backtested strategy to live markets using TradingNode, understand adapters, reconciliation, and production considerations.
+Deploy a backtested strategy to live markets using Python `TradingNode`, understand adapters, reconciliation, and production considerations.
+
+> **Runtime note:** This stage teaches Python live trading with `TradingNode`.
+> For Rust v2 / Rust-backed live-node work, use the `LiveNode` path documented
+> in `nt-live`.
 
 ## Prerequisites
 
@@ -16,7 +20,7 @@ The same strategy runs unchanged across backtest, sandbox, and live. The engine 
 
 ### TradingNode
 
-`TradingNode` is the live trading runtime. It manages:
+`TradingNode` is the Python live trading runtime. It manages:
 - Async event loop for network I/O
 - Adapter connections to exchanges
 - State reconciliation on startup
