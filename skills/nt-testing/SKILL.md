@@ -46,6 +46,22 @@ Required testing rules:
   can terminate the interpreter.
 - Keep unit tests deterministic and do not implicitly download datasets.
 
+## DST readiness
+
+Before promoting async/runtime modules to deterministic simulation testing (DST), verify:
+
+- Time, task, runtime, and signal primitives route through deterministic seams
+  rather than direct Tokio or OS calls.
+- Wall-clock reads go through the project time seam, not direct
+  `SystemTime::now()` at call sites.
+- Ordering-sensitive maps use `IndexMap` / `IndexSet`.
+- Control-plane `tokio::select!` blocks use `biased` when poll order affects
+  behavior.
+- `Instant::now()`, `SystemTime::now()`, `tokio::signal::ctrl_c`,
+  `std::thread::spawn`, and `tokio::task::spawn_blocking` do not escape
+  reviewed seams.
+- Replay-sensitive IDs are pure functions of their inputs.
+
 NautilusTrader's test suite covers seven categories:
 
 | Category | Scope | Typical Location |
@@ -60,33 +76,27 @@ NautilusTrader's test suite covers seven categories:
 
 ## Running Tests
 
-### Python (v1)
+### Primary commands
 
 ```bash
-# All Python tests
-pytest tests/ -v
+# v1 legacy Python tests
+make pytest
+# or
+uv run --active --no-sync pytest --new-first --failed-first
 
-# Specific test file
-pytest tests/test_trading.py -v
+# Rust-backed PyO3 Python tests
+make pytest-v2
 
-# With coverage
-pytest tests/ --cov=nautilus_trader
-```
+# Rust tests
+make cargo-test
+# or
+cargo nextest run --workspace --features "python,ffi,high-precision,defi" --cargo-profile nextest
 
-### Rust (v2 / cargo)
+# Optional feature coverage
+make cargo-test EXTRA_FEATURES="capnp"
 
-```bash
-# All Rust tests
-cargo test --workspace
-
-# Specific crate
-cargo test -p nautilus-core
-
-# With output
-cargo test -p nautilus-model -- --nocapture
-
-# Run benchmarks (not tests, but related)
-cargo bench -p nautilus-core
+# Performance tests
+make test-performance
 ```
 
 ### Makefile targets
@@ -284,14 +294,19 @@ Every dataset has a `metadata.json`:
 
 ```json
 {
-  "source": "binance",
-  "instrument_id": "BTCUSDT-PERP.BINANCE",
-  "data_type": "trade_ticks",
-  "time_range": {"start": "2024-01-01T00:00:00Z", "end": "2024-01-01T23:59:59Z"},
-  "record_count": 1440000,
-  "sha256": "abc123..."
+  "file": "binance_btcusdt_2024-01-01_trade_ticks.parquet",
+  "sha256": "abc123...",
+  "size_bytes": 1048576,
+  "original_url": "https://example.com/source",
+  "licence": "exchange terms",
+  "added_at": "2026-05-03T00:00:00Z"
 }
 ```
+
+User-fetched datasets must also document distribution, fetch method/reference,
+auth requirements, transform version, redistribution terms, and public mirror
+status. Commit manifests and metadata only when redistribution is restricted;
+tests must skip cleanly when local user-fetched data is absent.
 
 ### Large Data: Checksums
 
@@ -307,7 +322,7 @@ When schema changes invalidate Parquet files:
 
 ```bash
 # Regenerate from source
-pytest tests/test_data_curation/ -v
+uv run --active --no-sync pytest tests/test_data_curation/ -v
 
 # Verify new checksums
 sha256sum /tmp/<output_file>
@@ -325,7 +340,7 @@ sha256sum /tmp/<output_file>
 ### GitHub Actions
 
 - Tests run on every PR and push
-- Rust tests use `cargo test --workspace`
+- Rust tests use `make cargo-test` / `cargo nextest ... --cargo-profile nextest`
 - Python tests use `pytest tests/ -n auto`
 - Pre-commit hooks run: `ruff format`, `ruff check`, `rustfmt`, `clippy`
 
