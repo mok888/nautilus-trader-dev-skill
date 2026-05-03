@@ -4,7 +4,7 @@ A collection of AI agent skills (Claude Code, Gemini CLI, Codex, Hermes) for dev
 
 ## Overview
 
-These skills encode NautilusTrader best practices, correct patterns, and structured workflows for building production-quality trading systems. Validated against **NautilusTrader v1.224.0** (released 2026-03-03) and aligned with the official [NautilusTrader Developer Guide](https://nautilustrader.io/docs/latest/developer_guide/).
+These skills encode NautilusTrader best practices, correct patterns, and structured workflows for building production-quality trading systems. They are maintained against the official [NautilusTrader Developer Guide](https://nautilustrader.io/docs/latest/developer_guide/) with version-sensitive notes called out explicitly where they matter.
 
 ## Skills Map
 
@@ -31,7 +31,7 @@ These skills encode NautilusTrader best practices, correct patterns, and structu
 │   nt-signals      Indicators, order books, data analysis                     │
 │   nt-data         Market data types, subscriptions, catalogs                │
 │   nt-backtest     BacktestEngine, venues, actors, fill models               │
-│   nt-live         TradingNode, live adapters, reconciliation                │
+│   nt-live         LiveNode / TradingNode boundary, adapters, reconciliation │
 │   nt-adapters     CeFi adapter spec (Binance, OKX, Bybit…), 7-phase build   │
 │   nt-model        Core domain objects, identifiers, instruments             │
 │                                                                              │
@@ -88,7 +88,7 @@ These skills encode NautilusTrader best practices, correct patterns, and structu
 | `nt-signals` | Indicators, order books, analysis | Technical indicators, book imbalance |
 | `nt-data` | Market data types and pipelines | Subscriptions, catalogs, data model |
 | `nt-backtest` | Backtesting engine and config | BacktestEngine, actors, fill models |
-| `nt-live` | Live trading and production ops | TradingNode, adapters, reconciliation |
+| `nt-live` | Live trading and production ops | LiveNode / TradingNode boundary, adapters, reconciliation |
 | `nt-adapters` | CeFi adapter specification | 7-phase implementation, 118KB official spec |
 | `nt-model` | Core domain objects | Instruments, identifiers, value objects |
 

@@ -4,7 +4,7 @@
 **Commit:** 618653c
 **Branch:** main
 **Stack:** AI Agent Skills (Claude Code, Gemini CLI, Codex) for NautilusTrader development
-**NautilusTrader Version:** v1.224.0 Beta (released 2026-03-03)
+**NautilusTrader Alignment:** Latest developer guide with version-sensitive migration notes
 
 ## OVERVIEW
 
@@ -23,7 +23,7 @@ nautilus-trader-dev-skill/
 │   ├── nt-architect/      # Architecture decomposition (Actor/Indicator/Strategy)
 │   ├── nt-implement/      # Strategy/Actor/Indicator implementation
 │   ├── nt-evomap-integration/ # EvoMap advisory sidecar integration
-│   ├── nt-strategy-builder/ # BacktestEngine/TradingNode wiring
+│   ├── nt-strategy-builder/ # BacktestEngine and live-node wiring
 │   ├── nt-dex-adapter/    # Custom DEX adapter development
 │   └── nt-review/         # Pre-deployment code review
 ├── references/            # NautilusTrader API reference docs
@@ -60,7 +60,7 @@ nt-architect → nt-implement → nt-strategy-builder → nt-review
 1. **nt-architect** — Decompose system into Actor/Indicator/Strategy components
 2. **nt-implement** — Write individual components with templates
 3. **nt-evomap-integration** — (Optional) Add governed EvoMap advisory workflow
-4. **nt-strategy-builder** — Wire BacktestEngine or TradingNode
+4. **nt-strategy-builder** — Wire BacktestEngine, Python TradingNode, or Rust/v2 LiveNode paths
 5. **nt-dex-adapter** — (Optional) Build custom DEX adapter
 6. **nt-review** — Review before live deployment
 
@@ -128,10 +128,12 @@ uv sync --active --all-groups --all-extras
 uv run --no-sync python build.py
 
 # Python tests
-uv run pytest
+make pytest
+make pytest-v2
 
 # Rust tests
-cargo nextest run --workspace --features 'python,ffi,high-precision,defi'
+make cargo-test
+cargo nextest run --workspace --features 'python,ffi,high-precision,defi' --cargo-profile nextest
 
 # Skill-specific tests
 uv run pytest skills/nt-strategy-builder/tests/ -v
