@@ -1,7 +1,7 @@
 """
 Strategy Builder Template: Live Trading Node
 
-Demonstrates a production-ready TradingNode with:
+Demonstrates a production-ready Python live/integration-specific TradingNode with:
 - Reconciliation and resilience timeouts
 - Persistence and state recovery
 - Proper adapter factory wiring (CeFi or DEX)
@@ -10,6 +10,7 @@ Demonstrates a production-ready TradingNode with:
 Run with: uv run skills/nt-strategy-builder/templates/live_node.py
 
 Replace MyStrategy, MyExchange* with your actual adapters and strategies.
+For Rust v2 / Rust-backed live-node work, use the LiveNode path in nt-live.
 """
 
 import asyncio

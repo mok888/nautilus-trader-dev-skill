@@ -8,7 +8,9 @@ Common use cases:
 - Signal confirmation (one venue's data confirms another's signal)
 - Liquidity routing (send orders to best-priced venue)
 
-This template handles the data routing and signal isolation logic.
+This Python live/integration-specific TradingNode template handles the data
+routing and signal isolation logic. For Rust v2 / Rust-backed live-node work,
+use the LiveNode path in nt-live.
 """
 
 import asyncio

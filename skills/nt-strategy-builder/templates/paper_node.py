@@ -1,7 +1,8 @@
 """
 Strategy Builder Template: Paper Trading Node
 
-Paper trading connects to live market data but routes all orders through a
+This Python live/integration-specific TradingNode template connects to live
+market data but routes all orders through a
 simulated execution venue — no real money at risk while using real price feeds.
 
 Key difference from live_node.py:
@@ -9,6 +10,7 @@ Key difference from live_node.py:
 - Reconciliation still recommended so the node tracks its own paper state
 
 Replace MyExchange* data client with your actual market data adapter.
+For Rust v2 / Rust-backed live-node work, use the LiveNode path in nt-live.
 """
 
 import asyncio

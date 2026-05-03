@@ -2,8 +2,10 @@
 Strategy Builder Template: DEX Adapter as Venue
 
 Shows how to wire a custom DEX adapter (built with nt-dex-adapter skill) into
-BOTH a BacktestEngine and a TradingNode. The adapter is treated identically to
-any CeFi adapter from the framework's perspective.
+BOTH a BacktestEngine and a Python live/integration-specific TradingNode. The
+adapter is treated identically to any CeFi adapter from the framework's
+perspective. For Rust v2 / Rust-backed live-node work, use the LiveNode path in
+nt-live.
 
 Assumes a DEX adapter package structure produced by nt-dex-adapter:
   my_dex_adapter/
