@@ -61,6 +61,50 @@ def test_reports_unqualified_pre_commit_install(tmp_path: Path) -> None:
     assert "unqualified pre-commit install in skills/nt-dev/SKILL.md" in result.errors
 
 
+def test_reports_stale_capnp_version_file(tmp_path: Path) -> None:
+    write(tmp_path / "skills/nt-dev/SKILL.md", "Read capnp-version before install.\n")
+
+    result = run_checks(tmp_path)
+
+    assert result.ok is False
+    assert "stale cap'n proto version source in skills/nt-dev/SKILL.md" in result.errors
+
+
+def test_reports_imprecise_ld_library_path_guidance(tmp_path: Path) -> None:
+    write(
+        tmp_path / "skills/nt-dev/SKILL.md",
+        "export LD_LIBRARY_PATH=\"$(python -c 'import sys; print(sys.base_prefix)')/lib:$LD_LIBRARY_PATH\"\n",
+    )
+
+    result = run_checks(tmp_path)
+
+    assert result.ok is False
+    assert "imprecise LD_LIBRARY_PATH guidance in skills/nt-dev/SKILL.md" in result.errors
+
+
+def test_reports_stale_nt_testing_commands(tmp_path: Path) -> None:
+    write(
+        tmp_path / "skills/nt-testing/SKILL.md",
+        "Run pytest tests/ -v and cargo test --workspace as primary checks.\n",
+    )
+
+    result = run_checks(tmp_path)
+
+    assert result.ok is False
+    assert "stale pytest command in skills/nt-testing/SKILL.md" in result.errors
+    assert "stale cargo test command in skills/nt-testing/SKILL.md" in result.errors
+
+
+def test_reports_missing_testing_policy_deltas(tmp_path: Path) -> None:
+    write(tmp_path / "skills/nt-testing/SKILL.md", "Use DataTester and ExecTester evidence.\n")
+
+    result = run_checks(tmp_path)
+
+    assert result.ok is False
+    assert "missing invariant 'DST readiness' in skills/nt-testing/SKILL.md" in result.errors
+    assert "missing dataset metadata field 'size_bytes' in skills/nt-testing/SKILL.md" in result.errors
+
+
 def test_reports_missing_required_invariants(tmp_path: Path) -> None:
     write(tmp_path / "skills/nt-live/SKILL.md", "# Live\n")
     write(tmp_path / "skills/nt-testing/SKILL.md", "# Testing\n")
@@ -75,6 +119,19 @@ def test_reports_missing_required_invariants(tmp_path: Path) -> None:
     assert "missing invariant 'ExecTester' in skills/nt-testing/SKILL.md" in result.errors
     assert "missing invariant 'nautilus_network::http::HttpClient' in skills/nt-adapters/SKILL.md" in result.errors
     assert "missing invariant 'message immutability' in skills/nt-architect/SKILL.md" in result.errors
+
+
+def test_reports_missing_live_runtime_boundary_terms(tmp_path: Path) -> None:
+    write(tmp_path / "skills/nt-live/SKILL.md", "Prefer LiveNode.\n")
+    write(tmp_path / "skills/nt-strategy-builder/SKILL.md", "Use TradingNode.\n")
+    write(tmp_path / "skills/nt-review/SKILL.md", "Review live nodes.\n")
+
+    result = run_checks(tmp_path)
+
+    assert result.ok is False
+    assert "missing live runtime boundary in skills/nt-live/SKILL.md" in result.errors
+    assert "missing live runtime boundary in skills/nt-strategy-builder/SKILL.md" in result.errors
+    assert "missing live runtime boundary in skills/nt-review/SKILL.md" in result.errors
 
 
 def test_success_when_required_files_metadata_paths_and_invariants_exist(tmp_path: Path) -> None:
@@ -94,10 +151,35 @@ confidence: high
     ]:
         write(tmp_path / "references/developer_guide" / name, metadata + f"# {name}\n")
 
-    write(tmp_path / "skills/nt-live/SKILL.md", "Prefer LiveNode; label TradingNode legacy.\n")
-    write(tmp_path / "skills/nt-testing/SKILL.md", "Use DataTester and ExecTester evidence.\n")
-    write(tmp_path / "skills/nt-adapters/SKILL.md", "Use nautilus_network::http::HttpClient and get_runtime().spawn().\n")
+    write(
+        tmp_path / "skills/nt-live/SKILL.md",
+        "Prefer LiveNode for Rust v2; TradingNode remains Python live/integration-specific.\n"
+        "Legacy v1/Cython-oriented example.\n",
+    )
+    write(
+        tmp_path / "skills/nt-testing/SKILL.md",
+        "Use DataTester and ExecTester evidence.\n"
+        "DST readiness uses deterministic runtime seams.\n"
+        "Required dataset metadata: file sha256 size_bytes original_url licence added_at.\n",
+    )
+    write(
+        tmp_path / "skills/nt-adapters/SKILL.md",
+        "Use nautilus_network::http::HttpClient and get_runtime().spawn().\n",
+    )
     write(tmp_path / "skills/nt-architect/SKILL.md", "Preserve message immutability in designs.\n")
+    write(
+        tmp_path / "skills/nt-dev/SKILL.md",
+        "Use tools.toml for Cap'n Proto.\n"
+        "PYTHON_LIB_DIR uses sysconfig.get_config_var(\"LIBDIR\").\n",
+    )
+    write(
+        tmp_path / "skills/nt-strategy-builder/SKILL.md",
+        "LiveNode for Rust v2; TradingNode remains Python live/integration-specific.\n",
+    )
+    write(
+        tmp_path / "skills/nt-review/SKILL.md",
+        "Review LiveNode for Rust v2 and TradingNode as Python live/integration-specific.\n",
+    )
 
     result = run_checks(tmp_path)
 

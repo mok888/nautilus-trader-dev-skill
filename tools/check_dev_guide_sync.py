@@ -23,6 +23,14 @@ INVARIANT_TARGETS = {
     Path("skills/nt-architect/SKILL.md"): ["message immutability"],
 }
 
+DATASET_METADATA_FIELDS = ["file", "sha256", "size_bytes", "original_url", "licence", "added_at"]
+
+LIVE_RUNTIME_BOUNDARY_TARGETS = {
+    Path("skills/nt-live/SKILL.md"): ["LiveNode", "TradingNode", "Python live"],
+    Path("skills/nt-strategy-builder/SKILL.md"): ["LiveNode", "TradingNode", "Python live"],
+    Path("skills/nt-review/SKILL.md"): ["LiveNode", "TradingNode", "Python live"],
+}
+
 
 @dataclass(frozen=True)
 class CheckResult:
@@ -78,6 +86,10 @@ def run_checks(root: Path) -> CheckResult:
             errors.append(f"stale references/guides path in {relative}")
         if "pre-commit install" in text and "prek install" not in text:
             errors.append(f"unqualified pre-commit install in {relative}")
+        if "capnp-version" in text:
+            errors.append(f"stale cap'n proto version source in {relative}")
+        if "LD_LIBRARY_PATH" in text and 'sysconfig.get_config_var("LIBDIR")' not in text:
+            errors.append(f"imprecise LD_LIBRARY_PATH guidance in {relative}")
 
     for relative, required_terms in INVARIANT_TARGETS.items():
         absolute = root / relative
@@ -87,6 +99,29 @@ def run_checks(root: Path) -> CheckResult:
         for term in required_terms:
             if term not in text:
                 errors.append(f"missing invariant '{term}' in {relative.as_posix()}")
+
+    nt_testing = root / "skills/nt-testing/SKILL.md"
+    if nt_testing.exists():
+        text = _read(nt_testing)
+        if "pytest tests/ -v" in text:
+            errors.append("stale pytest command in skills/nt-testing/SKILL.md")
+        if "cargo test --workspace" in text:
+            errors.append("stale cargo test command in skills/nt-testing/SKILL.md")
+        if "DST readiness" not in text:
+            errors.append("missing invariant 'DST readiness' in skills/nt-testing/SKILL.md")
+        for field in DATASET_METADATA_FIELDS:
+            if field not in text:
+                errors.append(
+                    f"missing dataset metadata field '{field}' in skills/nt-testing/SKILL.md"
+                )
+
+    for relative, required_terms in LIVE_RUNTIME_BOUNDARY_TARGETS.items():
+        absolute = root / relative
+        if not absolute.exists():
+            continue
+        text = _read(absolute)
+        if not all(term in text for term in required_terms):
+            errors.append(f"missing live runtime boundary in {relative.as_posix()}")
 
     return CheckResult(ok=not errors, errors=errors)
 
