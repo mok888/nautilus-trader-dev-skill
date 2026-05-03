@@ -19,19 +19,18 @@ Complements the existing skills:
 | Scenario | Approach |
 |---|---|
 | Replay historical data, no live connection | `BacktestEngine` + `ParquetDataCatalog` |
-| Test strategy on live data without real orders | `TradingNode` in paper-trading mode |
-| Deploy to production with CeFi exchange | `TradingNode` + standard adapter |
-| Deploy with custom DEX venue | `TradingNode` + `nt-dex-adapter` factory |
-| Multi-venue arb or signal aggregation | Multi-venue `TradingNode` or `BacktestEngine` |
+| Test strategy on live data without real orders | Python live `TradingNode` paper-trading mode, or Rust/v2 `LiveNode` where applicable |
+| Deploy to production with CeFi exchange | Python live `TradingNode` + standard adapter, or Rust/v2 `LiveNode` where applicable |
+| Deploy with custom DEX venue | Python live `TradingNode` + `nt-dex-adapter` factory, or Rust/v2 `LiveNode` where applicable |
+| Multi-venue arb or signal aggregation | Multi-venue Python live `TradingNode`, Rust/v2 `LiveNode`, or `BacktestEngine` |
 
 ## Decision Tree: Which Execution Mode?
 
 ### Live runtime selection
 
-For new Rust-backed PyO3 adapters, start from the `LiveNode` path described in
-`references/developer_guide/contracts/live_runtime_contract.md`. Use
-`TradingNode` only for legacy v1/Cython integrations or existing examples that
-are explicitly still built on that runtime.
+Use `LiveNode` for Rust v2 / Rust-backed live-node work. Python live
+connectivity examples may still use `TradingNode`; label them as Python live or
+integration-specific rather than universal defaults.
 
 ```
 Are you using live market data?
@@ -41,11 +40,9 @@ Are you using live market data?
 │           ├─ DEX venue     → templates/dex_venue_input.py
 │           └─ Multi-venue   → templates/multi_venue_strategy.py
 │
-└─ YES ──► TradingNode
-            ├─ Real orders?
-            │   ├─ YES → templates/live_node.py
-            │   └─ NO  → templates/paper_node.py
-            └─ With DEX adapter → templates/dex_venue_input.py
+└─ YES ──► Runtime boundary
+            ├─ Python live/integration-specific → TradingNode templates
+            └─ Rust v2 / Rust-backed path       → LiveNode references
 ```
 
 ## Venue Data Input Types

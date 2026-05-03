@@ -37,16 +37,16 @@ NautilusTrader **live infrastructure domain** — live trading nodes, system ker
 Read `references/developer_guide/contracts/live_runtime_contract.md` before
 choosing a live runtime.
 
-- Prefer `nautilus_trader.live.LiveNode` for new Rust-backed PyO3 adapter and v2
-  live-runtime examples.
-- Treat `nautilus_trader.live.node.TradingNode` examples as legacy v1/Cython or
-  integration-specific unless the current official adapter docs say otherwise.
+- Use `nautilus_trader.live.LiveNode` for Rust v2 / Rust-backed live-node work.
+- Python live connectivity examples may still use
+  `nautilus_trader.live.node.TradingNode`; label those examples as Python live
+  or integration-specific rather than universal defaults.
 - Keep reconciliation enabled for production execution clients unless a venue
   limitation is documented and reviewed.
 
 ### TradingNode Configuration
 
-Legacy v1/Cython-oriented example.
+Python live/integration-specific `TradingNode` example.
 
 ```python
 from nautilus_trader.live.node import TradingNode
@@ -76,7 +76,7 @@ node = TradingNode(config=config)
 
 ### Node Lifecycle
 
-Legacy v1/Cython-oriented example.
+Python live/integration-specific `TradingNode` example.
 
 ```python
 # Build node
@@ -390,7 +390,8 @@ See `references/developer_guide/coding_standards.md` for project-wide convention
 - [ ] Error handling covers all event handlers
 - [ ] Logging configured for debugging and monitoring
 - [ ] Adapter credentials via environment variables, not hardcoded
-- [ ] Environment variables: `PYO3_PYTHON`, `PYTHONHOME`, `LD_LIBRARY_PATH` (Linux)
+- [ ] Environment variables: `PYO3_PYTHON`, `PYTHONHOME`, and Linux
+      `LD_LIBRARY_PATH` derived with `sysconfig.get_config_var("LIBDIR")`
 
 - Python style (PEP 8, type hints, docstrings)
 - Rust style (edition 2024, clippy lints)
