@@ -121,14 +121,15 @@ make install
 ### 5. Set Environment Variables (Linux/macOS only)
 
 ```bash
-# Linux only: Set library path for the Python interpreter
-export LD_LIBRARY_PATH="$(python -c 'import sys; print(sys.base_prefix)')/lib:$LD_LIBRARY_PATH"
-
 # Set Python executable path for PyO3
-export PYO3_PYTHON=$(pwd)/.venv/bin/python
+export PYO3_PYTHON="$PWD/.venv/bin/python"
+
+# Linux only: set library path for the uv-managed Python runtime
+PYTHON_LIB_DIR="$("$PYO3_PYTHON" -c 'import sysconfig; print(sysconfig.get_config_var("LIBDIR"))')"
+export LD_LIBRARY_PATH="$PYTHON_LIB_DIR${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
 
 # Required for Rust tests when using uv-installed Python
-export PYTHONHOME=$(python -c "import sys; print(sys.base_prefix)")
+export PYTHONHOME="$("$PYO3_PYTHON" -c 'import sys; print(sys.base_prefix)')"
 ```
 
 (On macOS, skip the `LD_LIBRARY_PATH` line — it's Linux-specific.)

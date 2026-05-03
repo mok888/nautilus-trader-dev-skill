@@ -37,7 +37,7 @@ NautilusTrader **developer workflow** — environment setup, coding standards, t
 |------|---------|---------|
 | **uv** | Python venv & dependency management | [docs.astral.sh/uv](https://docs.astral.sh/uv) |
 | **Rust** | Core platform implementation | [rust-lang.org/tools/install](https://www.rust-lang.org/tools/install) |
-| **Cap'n Proto** | Serialization schema compilation | Version pinned in `capnp-version` file |
+| **Cap'n Proto** | Serialization schema compilation | Version pinned in `tools.toml`; install with `./scripts/install-capnp.sh` |
 | **prek** | Automated formatting/linting at commit | `make install-tools`, then `prek install` |
 
 ### Initial Setup
@@ -78,14 +78,15 @@ pre-commit tooling.
 Required for Rust/PyO3 when using Python installed via `uv`:
 
 ```bash
-# Linux only: Python interpreter library path
-export LD_LIBRARY_PATH="$(python -c 'import sys; print(sys.base_prefix)')/lib:$LD_LIBRARY_PATH"
-
 # PyO3 Python interpreter path (reduces recompilation)
-export PYO3_PYTHON=$(pwd)/.venv/bin/python
+export PYO3_PYTHON="$PWD/.venv/bin/python"
+
+# Linux only: uv-managed Python runtime library path
+PYTHON_LIB_DIR="$("$PYO3_PYTHON" -c 'import sysconfig; print(sysconfig.get_config_var("LIBDIR"))')"
+export LD_LIBRARY_PATH="$PYTHON_LIB_DIR${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
 
 # Python home for Rust tests
-export PYTHONHOME=$(python -c "import sys; print(sys.base_prefix)")
+export PYTHONHOME="$("$PYO3_PYTHON" -c 'import sys; print(sys.base_prefix)')"
 ```
 
 Verify: `python -c "import sys; print(sys.executable)"` and check `$PYO3_PYTHON` / `$PYTHONHOME`.
@@ -93,17 +94,14 @@ Verify: `python -c "import sys; print(sys.executable)"` and check `$PYO3_PYTHON`
 ### Cap'n Proto Installation
 
 ```bash
-# Script (recommended)
+# Script (recommended; reads pinned version from tools.toml)
 ./scripts/install-capnp.sh
+
+# Inspect pinned version used by repo tooling
+bash scripts/tool-version.sh capnp
 
 # macOS
 brew install capnp
-
-# Linux from source
-CAPNP_VERSION=$(cat capnp-version)
-wget https://capnproto.org/capnproto-c++-${CAPNP_VERSION}.tar.gz
-tar xzf capnproto-c++-${CAPNP_VERSION}.tar.gz && cd capnproto-c++-${CAPNP_VERSION}
-./configure && make -j$(nproc) && sudo make install && sudo ldconfig
 ```
 
 ### Builds & Rebuilds
@@ -198,6 +196,24 @@ After any changes to `.rs`, `.pyx`, or `.pxd` files, rebuild with `make build` o
 - **Error handling**: `anyhow::Result<T>` primary; `thiserror` for domain errors; `?` for propagation
 - **Logging**: `log::info!`, `log::warn!` etc. — always fully qualified
 - **Async**: `get_runtime().spawn()` in adapters (not `tokio::spawn()`); `#[tokio::test]` OK in tests
+
+### Current Rust/PyO3 Deltas
+
+- PyO3 properties: use `#[getter]` only for cheap, side-effect-free,
+  attribute-like values. Use methods for actions, mutations, I/O, arguments,
+  non-trivial work, or collection clones.
+- Python stubs: annotate Python-exposed Rust APIs with `pyo3-stub-gen`
+  (`gen_stub_pyclass`, `gen_stub_pyclass_enum`, `gen_stub_pymethods`,
+  `gen_stub_pyfunction`) and regenerate with `make py-stubs-v2`.
+- PyO3 enums: do not combine the `hash` pyclass attribute with `eq_int`;
+  implement manual `__hash__` returning the discriminant.
+- DST-observable iteration: use `IndexMap` / `IndexSet` when iteration order
+  feeds observable behavior. Use `AHashMap` / `AHashSet` for lookup-only hot
+  paths, immutable `Arc<AHashMap<...>>` for read-only sharing, and `DashMap`
+  for concurrent reads/writes.
+- Async functions: document cancellation safety for control-plane futures.
+  Adapter sync-to-async bridges should use `get_runtime().block_on()`;
+  Python-thread-sensitive tasks should use `get_runtime().spawn()`.
 
 ## Testing & Benchmarking
 

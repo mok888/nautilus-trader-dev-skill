@@ -936,7 +936,7 @@ NautilusTrader uses [Cap'n Proto](https://capnproto.org/) for high-performance s
 
 ### Installing Cap'n Proto
 
-Install the Cap'n Proto compiler before working with schemas. The required version is specified in the `capnp-version` file in the repository root.
+Install the Cap'n Proto compiler before working with schemas. The required version is specified in `tools.toml` in the repository root and read by the pinned tool scripts.
 
 See the [Environment Setup](environment_setup.md) guide for detailed installation instructions for each platform.
 
@@ -947,7 +947,7 @@ Ubuntu's default `capnproto` package is too old. Linux users must install from s
 Verify installation:
 
 ```bash
-capnp --version  # Should match the version in capnp-version
+capnp --version  # Should match the version pinned in tools.toml
 ```
 
 ### Schema development workflow
